@@ -46,7 +46,7 @@ impl Hash for Fileinfo{
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                          .version("0.6.0")
+                          .version("0.7.0")
                           .author("Jon Moroney jmoroney@cs.ru.nl")
                           .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p S")
                           .arg(Arg::with_name("directories")
@@ -132,23 +132,28 @@ fn hash_file(file_path: &Path) -> Option<u64>{
     }
 }
 
-fn collect(current_dir: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
-    match fs::read_dir(current_dir) {
-        Err(e) => println!("Reading directory {} has failed with error {:?}", current_dir.to_str().unwrap(), e.kind()),
+fn collect(current_path: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
+    if current_path.is_file(){
+        match hash_file(&current_path){
+            Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![current_path.to_path_buf()].into_iter().collect(), file_hash: hash_val, file_len: current_path.metadata().unwrap().len()})},
+            None => {println!("Error encountered hashing {:?}. Skipping.", current_path)}
+        };
+        return file_set
+    };
+    match fs::read_dir(current_path) {
+        Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap(), e.kind()),
         Ok(paths) => for entry in paths {
             let item =  match entry{
                 Ok(v) => v,
-                Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_dir, e.kind());continue}
+                Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind());continue}
             };
             if item.file_type().unwrap().is_dir(){
                 file_set = collect(&item.path(), file_set);
             } else if item.file_type().unwrap().is_file(){
-                let hash = match hash_file(&item.path()){
-                    Some(v) => v,
-                    None => {println!("Error encountered hashing {:?}. Skipping.", item.path());continue}
+                match hash_file(&item.path()){
+                    Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
+                    None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
                 };
-                //println!("{:?}", item.path());
-                file_set.push(Fileinfo{file_paths: vec![item.path()].into_iter().collect(), file_hash: hash, file_len: item.metadata().unwrap().len()});
             }
         }
     }
