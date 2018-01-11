@@ -100,7 +100,6 @@ fn main() {
     let mut complete_files: Vec<Fileinfo> = directory_results.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
     complete_files.sort_unstable();
     complete_files.dedup_by(|a, b| if a==b{
-        //println!("{:?} Removed\n{:?} Retained", a, b);
         b.file_paths.extend(a.file_paths.drain());
         true
     } else {false});
@@ -143,18 +142,19 @@ fn collect(current_path: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
     match fs::read_dir(current_path) {
         Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap(), e.kind()),
         Ok(paths) => for entry in paths {
-            let item =  match entry{
-                Ok(v) => v,
-                Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind());continue}
+            match entry{
+                Ok(item) => {if item.file_type().unwrap().is_dir(){
+                    file_set = collect(&item.path(), file_set);
+                } else if item.file_type().unwrap().is_file(){
+                    match hash_file(&item.path()){
+                        Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
+                        None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
+                        };
+                    }
+                },
+                Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
             };
-            if item.file_type().unwrap().is_dir(){
-                file_set = collect(&item.path(), file_set);
-            } else if item.file_type().unwrap().is_file(){
-                match hash_file(&item.path()){
-                    Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
-                    None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
-                };
-            }
+
         }
     }
     file_set
