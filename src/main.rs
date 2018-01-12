@@ -123,7 +123,8 @@ fn hash_file(file_path: &Path) -> Option<u64>{
     let mut hasher = DefaultHasher::new();
     match fs::File::open(file_path) {
         Ok(f) => {
-            let buffer_reader = BufReader::with_capacity(1048576, f);
+            //let buffer_reader = BufReader::with_capacity(1048576, f);
+            let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/16)), 33554432) as usize, f);
             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
             Some(hasher.finish())
         }
@@ -154,7 +155,6 @@ fn collect(current_path: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
                 },
                 Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
             };
-
         }
     }
     file_set
