@@ -99,6 +99,7 @@ fn main() {
     }
     let mut complete_files: Vec<Fileinfo> = directory_results.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
     complete_files.sort_unstable();
+    //println!("complete_files len = {:?}", complete_files.len());
     complete_files.dedup_by(|a, b| if a==b{
         b.file_paths.extend(a.file_paths.drain());
         true
@@ -121,10 +122,11 @@ fn main() {
 
 fn hash_file(file_path: &Path) -> Option<u64>{
     let mut hasher = DefaultHasher::new();
+    //println!("Checking {:?}", file_path);
     match fs::File::open(file_path) {
         Ok(f) => {
             //let buffer_reader = BufReader::with_capacity(1048576, f);
-            let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/16)), 33554432) as usize, f);
+            let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
             Some(hasher.finish())
         }
@@ -140,13 +142,20 @@ fn collect(current_path: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
         };
         return file_set
     };
+    let mut thread_handles = Vec::new();
     match fs::read_dir(current_path) {
-        Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap(), e.kind()),
+        Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap_or("current_path unwrap error"), e.kind()),
         Ok(paths) => for entry in paths {
             match entry{
-                Ok(item) => {if item.file_type().unwrap().is_dir(){
-                    file_set = collect(&item.path(), file_set);
-                } else if item.file_type().unwrap().is_file(){
+                Ok(item) => {if item.file_type().ok().unwrap().is_dir(){
+
+                    thread_handles.push(thread::spawn(move|| -> Vec<Fileinfo> {
+                        collect(&item.path(), Vec::new())
+                    }));
+
+                    //file_set = collect(&item.path(), file_set);
+
+                } else if item.file_type().ok().unwrap().is_file(){
                     match hash_file(&item.path()){
                         Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
                         None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
@@ -156,6 +165,9 @@ fn collect(current_path: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
                 Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
             };
         }
+    }
+    for handle in thread_handles {
+        file_set.append(&mut handle.join().ok().unwrap());
     }
     file_set
 }
