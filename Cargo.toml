@@ -5,3 +5,5 @@ authors = ["Jon Moroney <j.moroney@cs.ru.nl>"]
 
 [dependencies]
 clap = "2.28.0"
+threadpool = "*"
+rayon = "0.9"
