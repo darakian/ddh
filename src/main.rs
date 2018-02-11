@@ -3,8 +3,8 @@ use std::io::Read;
 use std::hash::Hash;
 use std::io::BufReader;
 use std::path::Path;
-use std::thread;
 use std::sync::mpsc::channel;
+use std::sync::mpsc::Sender;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::cmp::Ordering;
@@ -93,42 +93,54 @@ fn main() {
     let display_power = match arguments.value_of("Blocksize").unwrap_or(""){"K" => 1, "M" => 2, "G" => 3, _ => 0};
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Bytes"};
     let display_divisor =  1024u64.pow(display_power);
-    let pool = ThreadPool::new(10);
-    let (sender, receiver) = channel();
+    let pool = ThreadPool::new(100);
+    let (sender, receiver) = channel::<Vec<Fileinfo>>();
     let mut directory_results = Vec::new();
-    let mut thread_handles = Vec::new();
     for arg in arguments.values_of("directories").unwrap().into_iter(){
         let arg_str = String::from(arg);
         let inner_sender = sender.clone();
-        thread_handles.push(pool.execute(move|| {
-            inner_sender.send(collect(Path::new(&arg_str), Vec::new())).unwrap();
-        }));
+        let inner_pool = pool.clone();
+        pool.execute(move|| {
+            inner_sender.send(collect_files(Path::new(&arg_str), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
+        });
     }
+
+    println!("Active threads = {}", pool.active_count());
+    while pool.active_count()>0 {
+        println!("Active threads = {}", pool.active_count());
+    }
+    println!("Active threads = {}", pool.active_count());
     pool.join();
-    directory_results.push(receiver.recv().unwrap());
-    // for handle in thread_handles {
-    //     directory_results.push(pool.join());
-    // }
-    let mut complete_files: Vec<Fileinfo> = directory_results.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
-    complete_files.sort_unstable();
-    complete_files.dedup_by(|a, b| if a==b{
-        b.file_paths.extend(a.file_paths.drain());
-        true
-    } else {false});
-    let shared_files: Vec<_> = complete_files.iter().filter(|x| x.file_paths.len()>1).collect();
-    let unique_files: Vec<_> = complete_files.iter().filter(|x| x.file_paths.len()==1).collect();
-    println!("{} Total files (with duplicates): {} {}", complete_files.iter().fold(0, |sum, x| sum+x.file_paths.len()), complete_files.iter().fold(0, |sum, x| sum+(x.file_len*x.file_paths.len() as u64))/display_divisor, blocksize);
-    println!("{} Total files (without duplicates): {} {}", complete_files.len(), complete_files.iter().fold(0, |sum, x| sum+(x.file_len))/display_divisor, blocksize);
-    println!("{} Single instance files: {} {}", unique_files.len(), unique_files.iter().fold(0, |sum, x| sum+x.file_len)/display_divisor, blocksize);
-    println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(), shared_files.iter().fold(0, |sum, x| sum+x.file_len)/display_divisor, blocksize, shared_files.iter().fold(0, |sum, x| sum+x.file_paths.len()));
-    match arguments.value_of("Print").unwrap_or(""){
-        "single" => {println!("Single instance files"); unique_files.iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
-        "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
-            println!("{} instances:", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap());
-            x.file_paths.iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
-            println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
-        },
-        _ => {}};
+    //directory_results = receiver.into_iter().cloned().collect();
+    //directory_results.push(receiver.into_iter().collect());
+    for entry in receiver.into_iter() {
+        println!("{:?}", entry);
+        directory_results.push(entry);
+    }
+    println!("Here", );
+    for element in directory_results {
+        println!("{:?}", element);
+    }
+    // let mut complete_files: Vec<Fileinfo> = directory_results.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
+    // complete_files.sort_unstable();
+    // complete_files.dedup_by(|a, b| if a==b{
+    //     b.file_paths.extend(a.file_paths.drain());
+    //     true
+    // } else {false});
+    // let shared_files: Vec<_> = complete_files.iter().filter(|x| x.file_paths.len()>1).collect();
+    // let unique_files: Vec<_> = complete_files.iter().filter(|x| x.file_paths.len()==1).collect();
+    // println!("{} Total files (with duplicates): {} {}", complete_files.iter().fold(0, |sum, x| sum+x.file_paths.len()), complete_files.iter().fold(0, |sum, x| sum+(x.file_len*x.file_paths.len() as u64))/display_divisor, blocksize);
+    // println!("{} Total files (without duplicates): {} {}", complete_files.len(), complete_files.iter().fold(0, |sum, x| sum+(x.file_len))/display_divisor, blocksize);
+    // println!("{} Single instance files: {} {}", unique_files.len(), unique_files.iter().fold(0, |sum, x| sum+x.file_len)/display_divisor, blocksize);
+    // println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(), shared_files.iter().fold(0, |sum, x| sum+x.file_len)/display_divisor, blocksize, shared_files.iter().fold(0, |sum, x| sum+x.file_paths.len()));
+    // match arguments.value_of("Print").unwrap_or(""){
+    //     "single" => {println!("Single instance files"); unique_files.iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
+    //     "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
+    //         println!("{} instances:", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap());
+    //         x.file_paths.iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
+    //         println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
+    //     },
+    //     _ => {}};
 }
 
 fn hash_file(file_path: &Path) -> Option<u64>{
@@ -145,36 +157,39 @@ fn hash_file(file_path: &Path) -> Option<u64>{
     }
 }
 
-fn collect(current_path: &Path, mut file_set: Vec<Fileinfo>) -> Vec<Fileinfo> {
-    if current_path.is_file(){
+fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadPool, collection_sender: Sender<Vec<Fileinfo>>) -> Vec<Fileinfo> {
+    //println!("Entering {:?}", current_path.to_str());
+    if current_path.is_dir(){
+        match fs::read_dir(current_path) {
+            Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap_or("current_path unwrap error"), e.kind()),
+            Ok(paths) => for entry in paths {
+                //println!("Path entry = {:?}", entry);
+                match entry{
+                    Ok(item) => {if item.file_type().ok().unwrap().is_dir(){
+                        let inner_pool = pool.clone();
+                        let inner_sender = collection_sender.clone();
+                        pool.execute(move|| {
+                            inner_sender.send(collect_files(Path::new(&item.path()), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
+                        });
+                    } else if item.file_type().ok().unwrap().is_file(){
+                        //println!("Hashing {:?}", current_path.to_str());
+                        match hash_file(&item.path()){
+                            Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_par_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
+                            None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
+                            };
+                        }
+                    },
+                    Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
+                };
+            }
+        }
+    }else if current_path.is_file(){
+        //println!("Hashing {:?}", current_path.to_str());
         match hash_file(&current_path){
             Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![current_path.to_path_buf()].into_par_iter().collect(), file_hash: hash_val, file_len: current_path.metadata().unwrap().len()})},
             None => {println!("Error encountered hashing {:?}. Skipping.", current_path)}
         };
-        return file_set
     };
-    let mut thread_handles = Vec::new();
-    match fs::read_dir(current_path) {
-        Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap_or("current_path unwrap error"), e.kind()),
-        Ok(paths) => for entry in paths {
-            match entry{
-                Ok(item) => {if item.file_type().ok().unwrap().is_dir(){
-                    thread_handles.push(thread::spawn(move|| -> Vec<Fileinfo> {
-                        collect(&item.path(), Vec::new())
-                    }));
-                } else if item.file_type().ok().unwrap().is_file(){
-                    match hash_file(&item.path()){
-                        Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_par_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
-                        None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
-                        };
-                    }
-                },
-                Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
-            };
-        }
-    }
-    for handle in thread_handles {
-        file_set.append(&mut handle.join().ok().unwrap());
-    }
+    //println!("Exiting {:?}", current_path.to_str());
     file_set
 }
