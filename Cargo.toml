@@ -1,7 +1,7 @@
 [package]
 name = "ddh"
-version = "0.7.0"
-authors = ["Jon Moroney <j.moroney@cs.ru.nl>"]
+version = "0.8.0"
+authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 
 [dependencies]
 clap = "2.28.0"
