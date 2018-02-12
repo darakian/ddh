@@ -118,8 +118,8 @@ fn main() {
         b.file_paths.extend(a.file_paths.drain());
         true
     } else {false});
-    let shared_files: Vec<_> = complete_files.iter().filter(|x| x.file_paths.len()>1).collect();
-    let unique_files: Vec<_> = complete_files.iter().filter(|x| x.file_paths.len()==1).collect();
+    let shared_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()>1).collect();
+    let unique_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()==1).collect();
     println!("{} Total files (with duplicates): {} {}", complete_files.iter().fold(0, |sum, x| sum+x.file_paths.len()), complete_files.iter().fold(0, |sum, x| sum+(x.file_len*x.file_paths.len() as u64))/display_divisor, blocksize);
     println!("{} Total files (without duplicates): {} {}", complete_files.len(), complete_files.iter().fold(0, |sum, x| sum+(x.file_len))/display_divisor, blocksize);
     println!("{} Single instance files: {} {}", unique_files.len(), unique_files.iter().fold(0, |sum, x| sum+x.file_len)/display_divisor, blocksize);
