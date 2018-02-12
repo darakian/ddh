@@ -95,6 +95,7 @@ fn main() {
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Bytes"};
     let display_divisor =  1024u64.pow(display_power);
     let thread_count = num_cpus::get()*4;
+    //println!("thread_count = {:?}", thread_count);
     let pool = ThreadPool::new(thread_count);
     let (sender, receiver) = channel();
     let mut directory_vectors = Vec::<Vec<Fileinfo>>::new();
