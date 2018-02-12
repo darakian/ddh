@@ -16,6 +16,7 @@ use std::hash::Hasher;
 extern crate clap;
 extern crate threadpool;
 extern crate rayon;
+extern crate num_cpus;
 use clap::{Arg, App};
 use rayon::prelude::*;
 use threadpool::*;
@@ -93,7 +94,8 @@ fn main() {
     let display_power = match arguments.value_of("Blocksize").unwrap_or(""){"K" => 1, "M" => 2, "G" => 3, _ => 0};
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Bytes"};
     let display_divisor =  1024u64.pow(display_power);
-    let pool = ThreadPool::new(32);
+    let thread_count = num_cpus::get()*4;
+    let pool = ThreadPool::new(thread_count);
     let (sender, receiver) = channel();
     let mut directory_vectors = Vec::<Vec<Fileinfo>>::new();
     for arg in arguments.values_of("directories").unwrap().into_iter(){
@@ -114,7 +116,7 @@ fn main() {
     }
     let mut complete_files: Vec<Fileinfo> = directory_vectors.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
     complete_files.sort_unstable();
-    complete_files.dedup_by(|a, b| if a==b{
+    complete_files.dedup_by(|a, b| if a==b {
         b.file_paths.extend(a.file_paths.drain());
         true
     } else {false});
@@ -128,7 +130,7 @@ fn main() {
         "single" => {println!("Single instance files"); unique_files.iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
         "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
             println!("{} instances:", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap());
-            x.file_paths.iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
+            x.file_paths.par_iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         _ => {}};

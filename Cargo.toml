@@ -7,3 +7,4 @@ authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 clap = "2.28.0"
 threadpool = "*"
 rayon = "0.9"
+num_cpus = "1.8.0"
