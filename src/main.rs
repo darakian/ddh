@@ -93,7 +93,7 @@ fn main() {
     let display_power = match arguments.value_of("Blocksize").unwrap_or(""){"K" => 1, "M" => 2, "G" => 3, _ => 0};
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Bytes"};
     let display_divisor =  1024u64.pow(display_power);
-    let pool = ThreadPool::new(100);
+    let pool = ThreadPool::new(32);
     let (sender, receiver) = channel();
     let mut directory_vectors = Vec::<Vec<Fileinfo>>::new();
     for arg in arguments.values_of("directories").unwrap().into_iter(){
