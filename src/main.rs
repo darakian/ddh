@@ -94,7 +94,7 @@ fn main() {
     let display_power = match arguments.value_of("Blocksize").unwrap_or(""){"K" => 1, "M" => 2, "G" => 3, _ => 0};
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Bytes"};
     let display_divisor =  1024u64.pow(display_power);
-    let thread_count = num_cpus::get()*4;
+    let thread_count = num_cpus::get()*2;
     //println!("thread_count = {:?}", thread_count);
     let pool = ThreadPool::new(thread_count);
     let (sender, receiver) = channel();
