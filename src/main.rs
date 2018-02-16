@@ -27,6 +27,15 @@ struct Fileinfo{
     file_len: u64,
     file_paths: HashSet<PathBuf>,
 }
+
+impl Fileinfo{
+    fn new(hash: u64, length: u64, path: PathBuf) -> Self{
+        let mut set = HashSet::<PathBuf>::new();
+        set.insert(path);
+        Fileinfo{file_hash: hash, file_len: length, file_paths: set}
+    }
+}
+
 impl PartialEq for Fileinfo{
     fn eq(&self, other: &Fileinfo) -> bool {
         self.file_hash==other.file_hash
@@ -156,17 +165,17 @@ fn hash_file(file_path: &Path) -> Option<u64>{
     }
 }
 
-// fn hash_and_push(file_path: &Path, sender: Sender<Fileinfo>) -> (){
-//     let mut hasher = DefaultHasher::new();
-//     match fs::File::open(file_path) {
-//         Ok(f) => {
-//             let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
-//             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
-//             sender.send(Fileinfo{file_paths: file_path, file_hash: hasher.finish(), file_len: file_path.metadata().unwrap().len()});
-//         }
-//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
-//     }
-// }
+fn hash_and_push(file_path: &Path, sender: Sender<Fileinfo>) -> (){
+    let mut hasher = DefaultHasher::new();
+    match fs::File::open(file_path) {
+        Ok(f) => {
+            let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
+            buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
+            sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf()));
+        }
+        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
+    }
+}
 
 fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadPool, collection_sender: Sender<Vec<Fileinfo>>) -> Vec<Fileinfo> {
     //println!("Entering {:?}", current_path.to_str());
