@@ -165,13 +165,13 @@ fn hash_file(file_path: &Path) -> Option<u64>{
     }
 }
 
-fn hash_and_push(file_path: &Path, sender: Sender<Fileinfo>) -> (){
+fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     let mut hasher = DefaultHasher::new();
     match fs::File::open(file_path) {
         Ok(f) => {
             let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
-            sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf()));
+            sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
     }
@@ -194,7 +194,7 @@ fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadP
                     } else if item.file_type().ok().unwrap().is_file(){
                         //println!("Hashing {:?}", current_path.to_str());
                         match hash_file(&item.path()){
-                            Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![item.path()].into_par_iter().collect(), file_hash: hash_val, file_len: item.metadata().unwrap().len()})},
+                            Some(hash_val) => {file_set.push(Fileinfo::new(hash_val, item.metadata().unwrap().len(), item.path()))},
                             None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
                             };
                         }
