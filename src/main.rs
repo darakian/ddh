@@ -135,9 +135,9 @@ fn main() {
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.iter().for_each(|x| {
-                println!("{} {:x}", x.file_paths.iter().next().unwrap().to_str().unwrap(), x.file_hash)});
+                println!("{}; {:x}", x.file_paths.iter().next().unwrap().to_str().unwrap(), x.file_hash)});
             shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!("{} {:x}", y.to_str().unwrap(), x.file_hash));})
+                x.file_paths.par_iter().for_each(|y| println!("{}; {:x}", y.to_str().unwrap(), x.file_hash));})
         },
         _ => {}};
 }
