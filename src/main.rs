@@ -135,9 +135,9 @@ fn main() {
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.iter().for_each(|x| {
-                println!("{}; {:x}", x.file_paths.iter().next().unwrap().to_str().unwrap(), x.file_hash)});
+                println!("{}; {:x}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_hash)});
             shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!("{}; {:x}", y.to_str().unwrap(), x.file_hash));})
+                x.file_paths.par_iter().for_each(|y| println!("{}; {:x}", y.canonicalize().unwrap().to_str().unwrap(), x.file_hash));})
         },
         _ => {}};
 }
@@ -155,6 +155,18 @@ fn hash_file(file_path: &Path) -> Option<u64>{
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path); None}
     }
 }
+
+// fn hash_and_push(file_path: &Path, sender: Sender<Fileinfo>) -> (){
+//     let mut hasher = DefaultHasher::new();
+//     match fs::File::open(file_path) {
+//         Ok(f) => {
+//             let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
+//             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
+//             sender.send(Fileinfo{file_paths: file_path, file_hash: hasher.finish(), file_len: file_path.metadata().unwrap().len()});
+//         }
+//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
+//     }
+// }
 
 fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadPool, collection_sender: Sender<Vec<Fileinfo>>) -> Vec<Fileinfo> {
     //println!("Entering {:?}", current_path.to_str());
