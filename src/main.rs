@@ -84,7 +84,7 @@ fn main() {
                           .arg(Arg::with_name("Print")
                                 .short("p")
                                 .long("print")
-                                .possible_values(&["single", "shared"])
+                                .possible_values(&["single", "shared", "csv"])
                                 .case_insensitive(true)
                                 .takes_value(true)
                                 .help("Print Single Instance or Shared Instance files.")
@@ -133,6 +133,11 @@ fn main() {
             println!("{} instances:", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap());
             x.file_paths.par_iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
+        },
+        "csv" => {unique_files.iter().for_each(|x| {
+                println!("{} {:x}", x.file_paths.iter().next().unwrap().to_str().unwrap(), x.file_hash)});
+            shared_files.iter().for_each(|x| {
+                x.file_paths.par_iter().for_each(|y| println!("{} {:x}", y.to_str().unwrap(), x.file_hash));})
         },
         _ => {}};
 }
