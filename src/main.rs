@@ -177,19 +177,23 @@ fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     }
 }
 
-// fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
-//     if current_path.is_file(){
-//         hash_and_send(current_path, sender.clone());
-//     } else if current_path.is_dir() {
-//         vec![fs::read_dir(current_path).unwrap().unwrap().collect::<std::fs::DirEntry>()].par_iter().map(|dir_entry|{
-//             if dir_entry.is_dir(){
-//                 traverse_and_spawn(dir_entry, sender.clone());
-//             } else if dir_entry.is_file(){
-//                 hash_and_send(dir_entry, sender.clone());
-//             }
-//         });
-//     }
-// }
+fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
+    if current_path.is_file(){
+        hash_and_send(current_path, sender.clone());
+    } else if current_path.is_dir() {
+        let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|r| r.unwrap()).collect();;
+        paths.par_iter().for_each_with(sender.clone(), |s, dir_entry| {
+            if dir_entry.path().is_dir(){
+                    traverse_and_spawn(dir_entry.path().as_path(), s.clone());
+                } else if dir_entry.path().is_file(){
+                    hash_and_send(dir_entry.path().as_path(), s.clone());
+                }
+        });
+        // .map(|dir_entry| {
+        //
+        // });
+    }
+}
 
 fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadPool, collection_sender: Sender<Vec<Fileinfo>>) -> Vec<Fileinfo> {
     //println!("Entering {:?}", current_path.to_str());
