@@ -26,3 +26,5 @@ OPTIONS:
 ARGS:
     <Directories>...    Directories to parse
 ````
+## How
+DDH works by hashing files to determine uniqueness and as such depends heavily on disk speeds for performance.
