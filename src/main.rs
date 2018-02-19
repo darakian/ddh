@@ -117,20 +117,28 @@ fn main() {
     } else {false});
     let shared_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()>1).collect();
     let unique_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()==1).collect();
-    println!("{} Total files (with duplicates): {} {}", complete_files.iter().fold(0, |sum, x| sum+x.file_paths.len()), complete_files.iter().fold(0, |sum, x| sum+(x.file_len*x.file_paths.len() as u64))/display_divisor, blocksize);
-    println!("{} Total files (without duplicates): {} {}", complete_files.len(), complete_files.iter().fold(0, |sum, x| sum+(x.file_len)/display_divisor), blocksize);
-    println!("{} Single instance files: {} {}", unique_files.len(), unique_files.iter().fold(0, |sum, x| sum+(x.file_len)/display_divisor), blocksize);
-    println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(), shared_files.iter().fold(0, |sum, x| sum+(x.file_len)/display_divisor), blocksize, shared_files.iter().fold(0, |sum, x| sum+x.file_paths.len()));
+    println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
+    complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
+    blocksize);
+    println!("{} Total files (without duplicates): {} {}", complete_files.len(), ((complete_files.par_iter().map(|x| {
+        if x.file_paths.len()==1{
+            x.file_len} else {0}
+        }).sum::<u64>())/(display_divisor)), blocksize);
+    println!("{} Single instance files: {} {}", unique_files.len(), unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize);
+    println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(),
+    shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize,
+    shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
+
     match arguments.value_of("Print").unwrap_or(""){
-        "single" => {println!("Single instance files"); unique_files.iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
-        "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
+        "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
+        "shared" => {println!("Shared instance files and instances"); shared_files.par_iter().for_each(|x| {
             println!("{} instances:", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap());
             x.file_paths.par_iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
-        "csv" => {unique_files.iter().for_each(|x| {
+        "csv" => {unique_files.par_iter().for_each(|x| {
                 println!("{}; {:x}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_hash)});
-            shared_files.iter().for_each(|x| {
+            shared_files.par_iter().for_each(|x| {
                 x.file_paths.par_iter().for_each(|y| println!("{}; {:x}", y.canonicalize().unwrap().to_str().unwrap(), x.file_hash));})
         },
         _ => {}};
