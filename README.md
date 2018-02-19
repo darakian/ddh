@@ -9,7 +9,7 @@ DDH takes two directories as arguments and returns the union or disunion (depend
 ```
 Directory Difference hTool 0.9.1
 Compare and contrast directories.
-Example invocation: ddh /home/jon/downloads /home/jon/documents -p S
+Example invocation: ddh /home/jon/downloads /home/jon/documents -p shared
 
 USAGE:
     ddh [OPTIONS] <Directories>...
