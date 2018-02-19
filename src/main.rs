@@ -5,6 +5,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
+use std::thread;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::cmp::Ordering;
@@ -14,12 +15,10 @@ use std::hash::Hasher;
 
 //External imports
 extern crate clap;
-extern crate threadpool;
 extern crate rayon;
 extern crate num_cpus;
 use clap::{Arg, App};
 use rayon::prelude::*;
-use threadpool::*;
 
 #[derive(Debug)]
 struct Fileinfo{
@@ -84,12 +83,6 @@ fn main() {
                                .max_values(1)
                                .possible_values(&["B", "K", "M", "G"])
                                .help("Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is Kilobytes."))
-                          // .arg(Arg::with_name("Max threads")
-                          //      .short("t")
-                          //      .long("threads")
-                          //      .default_value(10)
-                          //      .possible_values(&[2..100])
-                          //      .help("Set the maximum number of threads."))
                           .arg(Arg::with_name("Print")
                                 .short("p")
                                 .long("print")
@@ -103,32 +96,22 @@ fn main() {
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Kilobytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 1};
     let display_divisor =  1024u64.pow(display_power);
-    let thread_count = num_cpus::get()*2;
-    //println!("thread_count = {:?}", thread_count);
-    let pool = ThreadPool::new(thread_count);
     let (sender, receiver) = channel();
 
-    //let mut directory_vectors = Vec::<Vec<Fileinfo>>::new();
     for arg in arguments.values_of("directories").unwrap().into_iter(){
         let arg_str = String::from(arg);
         let inner_sender = sender.clone();
-        //let inner_pool = pool.clone();
-        pool.execute(move|| {
+        thread::spawn(move|| {
             traverse_and_spawn(Path::new(&arg_str), inner_sender.clone());
-            //inner_sender.send(collect_files(Path::new(&arg_str), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
         });
     }
+    drop(sender);
+    //thread::spawn(move || {sender;}); //Used to close the channel.
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
-    pool.join();
-    loop {
-        let receiver_value = receiver.try_recv();
-        if receiver_value.is_err() {break;}
-        else {
-            complete_files.push(receiver_value.unwrap())
-        }
+    for entry in receiver.iter(){
+        complete_files.push(entry);
     }
 
-    //let mut complete_files: Vec<Fileinfo> = directory_vectors.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
     complete_files.sort_unstable();
     complete_files.dedup_by(|a, b| if a==b {
         b.file_paths.extend(a.file_paths.drain());
@@ -154,20 +137,6 @@ fn main() {
         },
         _ => {}};
 }
-
-// fn hash_file(file_path: &Path) -> Option<u64>{
-//     let mut hasher = DefaultHasher::new();
-//     //println!("Checking {:?}", file_path);
-//     match fs::File::open(file_path) {
-//         Ok(f) => {
-//             //let buffer_reader = BufReader::with_capacity(1048576, f);
-//             let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
-//             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
-//             Some(hasher.finish())
-//         }
-//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path); None}
-//     }
-// }
 
 fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     let mut hasher = DefaultHasher::new();
@@ -231,4 +200,18 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
 //     };
 //     //println!("Exiting {:?}", current_path.to_str());
 //     file_set
+// }
+
+// fn hash_file(file_path: &Path) -> Option<u64>{
+//     let mut hasher = DefaultHasher::new();
+//     //println!("Checking {:?}", file_path);
+//     match fs::File::open(file_path) {
+//         Ok(f) => {
+//             //let buffer_reader = BufReader::with_capacity(1048576, f);
+//             let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
+//             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
+//             Some(hasher.finish())
+//         }
+//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path); None}
+//     }
 // }
