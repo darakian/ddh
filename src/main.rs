@@ -16,7 +16,6 @@ use std::hash::Hasher;
 //External imports
 extern crate clap;
 extern crate rayon;
-extern crate num_cpus;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
