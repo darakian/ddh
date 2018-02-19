@@ -105,13 +105,12 @@ fn main() {
         });
     }
     drop(sender);
-    //thread::spawn(move || {sender;}); //Used to close the channel.
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
 
-    complete_files.sort_unstable();
+    complete_files.par_sort_unstable();
     complete_files.dedup_by(|a, b| if a==b {
         b.file_paths.extend(a.file_paths.drain());
         true
