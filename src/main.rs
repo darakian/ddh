@@ -107,24 +107,28 @@ fn main() {
     //println!("thread_count = {:?}", thread_count);
     let pool = ThreadPool::new(thread_count);
     let (sender, receiver) = channel();
-    let mut directory_vectors = Vec::<Vec<Fileinfo>>::new();
+
+    //let mut directory_vectors = Vec::<Vec<Fileinfo>>::new();
     for arg in arguments.values_of("directories").unwrap().into_iter(){
         let arg_str = String::from(arg);
         let inner_sender = sender.clone();
-        let inner_pool = pool.clone();
+        //let inner_pool = pool.clone();
         pool.execute(move|| {
-            inner_sender.send(collect_files(Path::new(&arg_str), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
+            traverse_and_spawn(Path::new(&arg_str), inner_sender.clone());
+            //inner_sender.send(collect_files(Path::new(&arg_str), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
         });
     }
+    let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     pool.join();
     loop {
         let receiver_value = receiver.try_recv();
         if receiver_value.is_err() {break;}
         else {
-            directory_vectors.push(receiver_value.unwrap())
+            complete_files.push(receiver_value.unwrap())
         }
     }
-    let mut complete_files: Vec<Fileinfo> = directory_vectors.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
+
+    //let mut complete_files: Vec<Fileinfo> = directory_vectors.into_iter().fold(Vec::new(), |mut unifier, element| {unifier.extend(element); unifier});
     complete_files.sort_unstable();
     complete_files.dedup_by(|a, b| if a==b {
         b.file_paths.extend(a.file_paths.drain());
@@ -151,19 +155,19 @@ fn main() {
         _ => {}};
 }
 
-fn hash_file(file_path: &Path) -> Option<u64>{
-    let mut hasher = DefaultHasher::new();
-    //println!("Checking {:?}", file_path);
-    match fs::File::open(file_path) {
-        Ok(f) => {
-            //let buffer_reader = BufReader::with_capacity(1048576, f);
-            let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
-            buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
-            Some(hasher.finish())
-        }
-        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path); None}
-    }
-}
+// fn hash_file(file_path: &Path) -> Option<u64>{
+//     let mut hasher = DefaultHasher::new();
+//     //println!("Checking {:?}", file_path);
+//     match fs::File::open(file_path) {
+//         Ok(f) => {
+//             //let buffer_reader = BufReader::with_capacity(1048576, f);
+//             let buffer_reader = BufReader::with_capacity(std::cmp::min(std::cmp::max(4096,(f.metadata().unwrap().len()/8)), 33554432) as usize, f);
+//             buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
+//             Some(hasher.finish())
+//         }
+//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path); None}
+//     }
+// }
 
 fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     let mut hasher = DefaultHasher::new();
@@ -189,45 +193,42 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                     hash_and_send(dir_entry.path().as_path(), s.clone());
                 }
         });
-        // .map(|dir_entry| {
-        //
-        // });
     }
 }
 
-fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadPool, collection_sender: Sender<Vec<Fileinfo>>) -> Vec<Fileinfo> {
-    //println!("Entering {:?}", current_path.to_str());
-    if current_path.is_dir(){
-        match fs::read_dir(current_path) {
-            Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap_or("current_path unwrap error"), e.kind()),
-            Ok(paths) => for entry in paths {
-                //println!("Path entry = {:?}", entry);
-                match entry{
-                    Ok(item) => {if item.file_type().ok().unwrap().is_dir(){
-                        let inner_pool = pool.clone();
-                        let inner_sender = collection_sender.clone();
-                        pool.execute(move|| {
-                            inner_sender.send(collect_files(Path::new(&item.path()), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
-                        });
-                    } else if item.file_type().ok().unwrap().is_file(){
-                        //println!("Hashing {:?}", current_path.to_str());
-                        match hash_file(&item.path()){
-                            Some(hash_val) => {file_set.push(Fileinfo::new(hash_val, item.metadata().unwrap().len(), item.path()))},
-                            None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
-                            };
-                        }
-                    },
-                    Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
-                };
-            }
-        }
-    }else if current_path.is_file(){
-        //println!("Hashing {:?}", current_path.to_str());
-        match hash_file(&current_path){
-            Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![current_path.to_path_buf()].into_par_iter().collect(), file_hash: hash_val, file_len: current_path.metadata().unwrap().len()})},
-            None => {println!("Error encountered hashing {:?}. Skipping.", current_path)}
-        };
-    };
-    //println!("Exiting {:?}", current_path.to_str());
-    file_set
-}
+// fn collect_files(current_path: &Path, mut file_set: Vec<Fileinfo>, pool: ThreadPool, collection_sender: Sender<Vec<Fileinfo>>) -> Vec<Fileinfo> {
+//     //println!("Entering {:?}", current_path.to_str());
+//     if current_path.is_dir(){
+//         match fs::read_dir(current_path) {
+//             Err(e) => println!("Reading directory {} has failed with error {:?}", current_path.to_str().unwrap_or("current_path unwrap error"), e.kind()),
+//             Ok(paths) => for entry in paths {
+//                 //println!("Path entry = {:?}", entry);
+//                 match entry{
+//                     Ok(item) => {if item.file_type().ok().unwrap().is_dir(){
+//                         let inner_pool = pool.clone();
+//                         let inner_sender = collection_sender.clone();
+//                         pool.execute(move|| {
+//                             inner_sender.send(collect_files(Path::new(&item.path()), Vec::new(), inner_pool, inner_sender.clone())).unwrap();
+//                         });
+//                     } else if item.file_type().ok().unwrap().is_file(){
+//                         //println!("Hashing {:?}", current_path.to_str());
+//                         match hash_file(&item.path()){
+//                             Some(hash_val) => {file_set.push(Fileinfo::new(hash_val, item.metadata().unwrap().len(), item.path()))},
+//                             None => {println!("Error encountered hashing {:?}. Skipping.", item.path())}
+//                             };
+//                         }
+//                     },
+//                     Err(e) => {println!("Error encountered reading from {:?}\n{:?}", current_path, e.kind())}
+//                 };
+//             }
+//         }
+//     }else if current_path.is_file(){
+//         //println!("Hashing {:?}", current_path.to_str());
+//         match hash_file(&current_path){
+//             Some(hash_val) => {file_set.push(Fileinfo{file_paths: vec![current_path.to_path_buf()].into_par_iter().collect(), file_hash: hash_val, file_len: current_path.metadata().unwrap().len()})},
+//             None => {println!("Error encountered hashing {:?}. Skipping.", current_path)}
+//         };
+//     };
+//     //println!("Exiting {:?}", current_path.to_str());
+//     file_set
+// }
