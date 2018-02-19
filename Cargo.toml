@@ -6,5 +6,5 @@ authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 [dependencies]
 clap = "2.28.0"
 threadpool = "*"
-rayon = "0.9"
+rayon = "1.0"
 num_cpus = "1.8.0"
