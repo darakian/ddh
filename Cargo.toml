@@ -1,9 +1,8 @@
 [package]
 name = "ddh"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 
 [dependencies]
 clap = "2.30.0"
 rayon = "1.0"
-filebuffer = "0.3.0"
