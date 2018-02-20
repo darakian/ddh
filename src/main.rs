@@ -138,7 +138,7 @@ fn main() {
         "csv" => {unique_files.par_iter().for_each(|x| {
                 println!("{}; {:x}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_hash)});
             shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!("{:x}, {}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap(), x.file_len,));})
+                x.file_paths.par_iter().for_each(|y| println!("{:x}, {}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
         },
         _ => {}};
 }
