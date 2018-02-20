@@ -1,6 +1,6 @@
 //Std imports
-use std::io::Read;
-use std::io::BufReader;
+// use std::io::Read;
+// use std::io::BufReader;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::path::Path;
@@ -15,6 +15,8 @@ use std::fs::{self};
 //External imports
 extern crate clap;
 extern crate rayon;
+extern crate filebuffer;
+use filebuffer::FileBuffer;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
@@ -141,10 +143,12 @@ fn main() {
 
 fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     let mut hasher = DefaultHasher::new();
-    match fs::File::open(file_path) {
+    //match fs::File::open(file_path) {
+    match FileBuffer::open(file_path){
         Ok(f) => {
-            let buffer_reader = BufReader::new(f);
-            buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
+            //let buffer_reader = BufReader::new(f);
+            //buffer_reader.bytes().for_each(|x| hasher.write(&[x.unwrap()]));
+            hasher.write(&f);
             sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
