@@ -1,17 +1,17 @@
 //Std imports
 use std::io::Read;
-use std::hash::Hash;
 use std::io::BufReader;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::collections::hash_map::DefaultHasher;
 use std::cmp::Ordering;
 use std::fs::{self};
-use std::collections::hash_map::DefaultHasher;
-use std::hash::Hasher;
 
 //External imports
 extern crate clap;
