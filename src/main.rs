@@ -116,7 +116,6 @@ fn main() {
         true
     } else {false});
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
-
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
     complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
     blocksize);
@@ -139,7 +138,7 @@ fn main() {
         "csv" => {unique_files.par_iter().for_each(|x| {
                 println!("{}; {:x}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_hash)});
             shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!("{}, {:x}", y.canonicalize().unwrap().to_str().unwrap(), x.file_hash));})
+                x.file_paths.par_iter().for_each(|y| println!("{:x}, {}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap(), x.file_len,));})
         },
         _ => {}};
 }
