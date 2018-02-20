@@ -141,13 +141,13 @@ fn main() {
 
 fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     let mut hasher = DefaultHasher::new();
-    let mut four_k_buf = [0;4096];
     match fs::File::open(file_path) {
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
+            let mut hash_buffer = [0;32768];
             loop {
-                match buffer_reader.read(&mut four_k_buf) {
-                    Ok(n) if n>0 => hasher.write(&four_k_buf[0..n]),
+                match buffer_reader.read(&mut hash_buffer) {
+                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
                     Ok(n) if n==0 => break,
                     Err(e) => println!("{:?} reading {:?}", e, file_path),
                     _ => println!("Should ne be here"),
