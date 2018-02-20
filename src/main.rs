@@ -115,8 +115,9 @@ fn main() {
         b.file_paths.extend(a.file_paths.drain());
         true
     } else {false});
-    let shared_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()>1).collect();
-    let unique_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()==1).collect();
+    let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
+    // let shared_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()>1).collect();
+    // let unique_files: Vec<_> = complete_files.par_iter().filter(|x| x.file_paths.len()==1).collect();
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
     complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
     blocksize);
