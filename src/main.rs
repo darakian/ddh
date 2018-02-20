@@ -7,7 +7,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-use std::thread;
 use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::cmp::Ordering;
@@ -96,14 +95,11 @@ fn main() {
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 1};
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
+    let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().collect();
+    search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
+        traverse_and_spawn(Path::new(&search_dir), s.clone());
+    });
 
-    for arg in arguments.values_of("directories").unwrap().into_iter(){
-        let arg_str = String::from(arg);
-        let inner_sender = sender.clone();
-        thread::spawn(move|| {
-            traverse_and_spawn(Path::new(&arg_str), inner_sender.clone());
-        });
-    }
     drop(sender);
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     for entry in receiver.iter(){
