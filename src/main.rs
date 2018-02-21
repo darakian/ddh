@@ -128,11 +128,11 @@ fn main() {
         "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
         "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
             println!("instances of {}:", x.file_hash);
-            x.file_paths.par_iter().for_each(|y| println!("{} - {:x}", y.to_str().unwrap(), x.file_hash));
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.par_iter().for_each(|x| {
-                println!("{}; {:x}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_hash)});
+                println!("{:x}, {}, {}", x.file_hash, x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
             shared_files.iter().for_each(|x| {
                 x.file_paths.par_iter().for_each(|y| println!("{:x}, {}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
         },
