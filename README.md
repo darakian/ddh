@@ -10,6 +10,7 @@ DDH traverses input directories and their subdirectories, hashes all files found
 * git clone https://github.com/darakian/ddh.git ddh
 * cd ddh
 * cargo build --release
+* the ddh binary will then be at target/release/ddh
 
 ## Example
 ```
