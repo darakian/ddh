@@ -117,8 +117,6 @@ fn main() {
         true
     } else {false});
 
-    //Hash if
-    //complete_files.par_iter().for
 
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
@@ -145,25 +143,25 @@ fn main() {
         _ => {}};
 }
 
-fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
-    let mut hasher = DefaultHasher::new();
-    match fs::File::open(file_path) {
-        Ok(f) => {
-            let mut buffer_reader = BufReader::new(f);
-            let mut hash_buffer = [0;32768];
-            loop {
-                match buffer_reader.read(&mut hash_buffer) {
-                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
-                    Ok(n) if n==0 => break,
-                    Err(e) => println!("{:?} reading {:?}", e, file_path),
-                    _ => println!("Should ne be here"),
-                }
-            }
-            sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
-        }
-        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
-    }
-}
+// fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
+//     let mut hasher = DefaultHasher::new();
+//     match fs::File::open(file_path) {
+//         Ok(f) => {
+//             let mut buffer_reader = BufReader::new(f);
+//             let mut hash_buffer = [0;32768];
+//             loop {
+//                 match buffer_reader.read(&mut hash_buffer) {
+//                     Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
+//                     Ok(n) if n==0 => break,
+//                     Err(e) => println!("{:?} reading {:?}", e, file_path),
+//                     _ => println!("Should ne be here"),
+//                 }
+//             }
+//             sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
+//         }
+//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
+//     }
+// }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
     let mut hasher = DefaultHasher::new();
