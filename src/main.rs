@@ -104,17 +104,15 @@ fn main() {
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
-    
+
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
-        hash_and_update(a);
-        hash_and_update(b);
-        //b.file_paths.extend(a.file_paths.drain());
+        vec![a, b].into_par_iter().for_each(|y| hash_and_update(y));
         false
     } else {false});
 
     complete_files.par_sort_unstable();
-    complete_files.dedup_by(|a, b| if a==b {
+    complete_files.dedup_by(|a, b| if (a.file_hash!=0)&&(b.file_hash!=0)&&(a==b) {
         b.file_paths.extend(a.file_paths.drain());
         true
     } else {false});
