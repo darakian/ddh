@@ -104,7 +104,7 @@ fn main() {
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
-    //complete_files.par_sort_unstable();
+    
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
         hash_and_update(a);
@@ -113,10 +113,11 @@ fn main() {
         false
     } else {false});
 
-    // complete_files.dedup_by(|a, b| if a==b {
-    //     b.file_paths.extend(a.file_paths.drain());
-    //     true
-    // } else {false});
+    complete_files.par_sort_unstable();
+    complete_files.dedup_by(|a, b| if a==b {
+        b.file_paths.extend(a.file_paths.drain());
+        true
+    } else {false});
 
     //Hash if
     //complete_files.par_iter().for
