@@ -110,7 +110,7 @@ fn main() {
         hash_and_update(a);
         hash_and_update(b);
         //b.file_paths.extend(a.file_paths.drain());
-        true
+        false
     } else {false});
 
     // complete_files.dedup_by(|a, b| if a==b {
@@ -134,14 +134,14 @@ fn main() {
     match arguments.value_of("Print").unwrap_or(""){
         "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
         "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
-            println!("instances of {}:", x.file_hash);
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
+            println!("instances of {:x}:", x.file_hash);
+            x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}", y.to_str().unwrap()));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.par_iter().for_each(|x| {
-                println!("{:x}, {}, {}", x.file_hash, x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
+                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
             shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!("{:x}, {}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
+                x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
         },
         _ => {}};
 }
