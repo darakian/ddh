@@ -99,26 +99,33 @@ fn main() {
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
-
     drop(sender);
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
-
-    complete_files.par_sort_unstable();
-    complete_files.dedup_by(|a, b| if a==b {
-        b.file_paths.extend(a.file_paths.drain());
+    //complete_files.par_sort_unstable();
+    complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
+    complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
+        hash_and_update(a);
+        hash_and_update(b);
+        //b.file_paths.extend(a.file_paths.drain());
         true
     } else {false});
+
+    // complete_files.dedup_by(|a, b| if a==b {
+    //     b.file_paths.extend(a.file_paths.drain());
+    //     true
+    // } else {false});
+
+    //Hash if
+    //complete_files.par_iter().for
+
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
     complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
     blocksize);
-    println!("{} Total files (without duplicates): {} {}", complete_files.len(), ((complete_files.par_iter().map(|x| {
-        if x.file_paths.len()==1{
-            x.file_len} else {0}
-        }).sum::<u64>())/(display_divisor)), blocksize);
+    println!("{} Total files (without duplicates): {} {}", complete_files.len(), (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor), blocksize);
     println!("{} Single instance files: {} {}", unique_files.len(), unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize);
     println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(),
     shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize,
@@ -159,17 +166,35 @@ fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
     }
 }
 
+fn hash_and_update(input: &mut Fileinfo) -> (){
+    let mut hasher = DefaultHasher::new();
+    match fs::File::open(input.file_paths.iter().next().unwrap()) {
+        Ok(f) => {
+            let mut buffer_reader = BufReader::new(f);
+            let mut hash_buffer = [0;32768];
+            loop {
+                match buffer_reader.read(&mut hash_buffer) {
+                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
+                    Ok(n) if n==0 => break,
+                    Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().unwrap()),
+                    _ => println!("Should ne be here"),
+                }
+            }
+            input.file_hash=hasher.finish();
+            //sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
+        }
+        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().unwrap());}
+    }
+}
+
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if current_path.is_file(){
-        hash_and_send(current_path, sender.clone());
-    } else if current_path.is_dir() {
-        let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|r| r.unwrap()).collect();;
-        paths.par_iter().for_each_with(sender.clone(), |s, dir_entry| {
-            if dir_entry.path().is_dir(){
-                    traverse_and_spawn(dir_entry.path().as_path(), s.clone());
-                } else if dir_entry.path().is_file(){
-                    hash_and_send(dir_entry.path().as_path(), s.clone());
-                }
+        sender.send(Fileinfo::new(0, current_path.metadata().unwrap().len(), current_path.to_path_buf())).unwrap();
+        //hash_and_send(current_path, sender.clone());
+    } else {
+        let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|r| r.unwrap()).collect();
+        paths.par_iter().for_each_with(sender, |s, dir_entry| {
+            traverse_and_spawn(dir_entry.path().as_path(), s.clone());
         });
     }
 }
