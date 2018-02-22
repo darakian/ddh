@@ -115,10 +115,7 @@ fn main() {
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
     complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
     blocksize);
-    println!("{} Total files (without duplicates): {} {}", complete_files.len(), ((complete_files.par_iter().map(|x| {
-        if x.file_paths.len()==1{
-            x.file_len} else {0}
-        }).sum::<u64>())/(display_divisor)), blocksize);
+    println!("{} Total files (without duplicates): {} {}", complete_files.len(), (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor), blocksize);
     println!("{} Single instance files: {} {}", unique_files.len(), unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize);
     println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(),
     shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize,
