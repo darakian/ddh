@@ -34,4 +34,4 @@ ARGS:
     <Directories>...    Directories to parse
 ```
 ## How
-DDH works by hashing files to determine uniqueness and as such depends heavily on disk speeds for performance.
+DDH works by comparing file sizes and hashing duplicates to determine uniqueness. DDH spawns as many threads as the system has (logical) cores and depends heavily on disk speeds for hashing performance.
