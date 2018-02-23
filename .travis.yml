@@ -7,3 +7,11 @@ script:
   - cargo test --verbose --all
   - cargo clean
   - cargo build --release --all
+  - ls target/release
+# deploy:
+#   provider: releases
+#   api_key: "GITHUB OAUTH TOKEN"
+#   file: target/release/
+#   skip_cleanup: true
+#   on:
+#     tags: true
