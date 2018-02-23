@@ -35,20 +35,20 @@ impl Fileinfo{
 
 impl PartialEq for Fileinfo{
     fn eq(&self, other: &Fileinfo) -> bool {
-        self.file_hash==other.file_hash
+        (self.file_hash==other.file_hash)&&(self.file_len==other.file_len)
     }
 }
 impl Eq for Fileinfo{}
 
 impl PartialOrd for Fileinfo{
     fn partial_cmp(&self, other: &Fileinfo) -> Option<Ordering>{
-        self.file_hash.partial_cmp(&other.file_hash)
+        self.file_len.partial_cmp(&other.file_len)
     }
 }
 
 impl Ord for Fileinfo{
     fn cmp(&self, other: &Fileinfo) -> Ordering {
-        self.file_hash.cmp(&other.file_hash)
+        self.file_len.cmp(&other.file_len)
     }
 }
 
@@ -114,12 +114,6 @@ fn main() {
         } else {false}
     } else {false});
 
-    //complete_files.par_sort_unstable();
-    // complete_files.dedup_by(|a, b| if (a.file_hash!=0)&&(b.file_hash!=0)&&(a==b) {
-    //     b.file_paths.extend(a.file_paths.drain());
-    //     true
-    // } else {false});
-
 
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
@@ -146,26 +140,6 @@ fn main() {
         _ => {}};
 }
 
-// fn hash_and_send(file_path: &Path, sender: Sender<Fileinfo>) -> (){
-//     let mut hasher = DefaultHasher::new();
-//     match fs::File::open(file_path) {
-//         Ok(f) => {
-//             let mut buffer_reader = BufReader::new(f);
-//             let mut hash_buffer = [0;32768];
-//             loop {
-//                 match buffer_reader.read(&mut hash_buffer) {
-//                     Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
-//                     Ok(n) if n==0 => break,
-//                     Err(e) => println!("{:?} reading {:?}", e, file_path),
-//                     _ => println!("Should ne be here"),
-//                 }
-//             }
-//             sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
-//         }
-//         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, file_path);}
-//     }
-// }
-
 fn hash_and_update(input: &mut Fileinfo) -> (){
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().unwrap()) {
@@ -181,8 +155,6 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
                 }
             }
             input.file_hash=hasher.finish();
-            //Some(input)
-            //sender.send(Fileinfo::new(hasher.finish(),file_path.metadata().unwrap().len(), file_path.to_path_buf())).unwrap();
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().unwrap())}
     }
@@ -191,7 +163,6 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if current_path.is_file(){
         sender.send(Fileinfo::new(0, current_path.metadata().unwrap().len(), current_path.to_path_buf())).unwrap();
-        //hash_and_send(current_path, sender.clone());
     } else {
         let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|r| r.unwrap()).collect();
         paths.par_iter().for_each_with(sender, |s, dir_entry| {
