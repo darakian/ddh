@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/darakian/ddh.svg?branch=master)](https://travis-ci.org/darakian/ddh)
 # The **D**irectory **D**ifferential **h**Tool
 The H is silent. This tool is called DDH for two very good reasons
 * DDT is a dangerous pesticide
