@@ -7,13 +7,4 @@ script:
 - cargo test --verbose --all
 - cargo clean
 - cargo build --release --all
-- cargo build --release --target=x86_64-pc-windows-gnu
-- ls target/release
-deploy:
-  provider: releases
-  api_key:
-    secure: aYo08wedKG5IRd7MKhWUU/iwqpnSAbRJ4uACY54KkI3jOoH5RdSx0dL6BAWp8Q2qf7iQpL0YahiqjGNQe760IfqRrlISuOvAJOTOruEEKhRe036X+38266P91MPJLj1eDvzpMW87kSjILlXiljfznqIsgRlPRcUBddxOWfGbjJd8euCi3Tl6f1iXTeMf3gyatO9JWCqqh0UAMcjMGTYKUHuTSH07u+Xkth+6z84VoANxknahwKhvH4l+Z0PBy9zVAW/n4CuHQX3K1jf49OgXsSzyieFOJzbeDrqmDKG+YemUHCFzFjEZ3W4rk+qUL7kpAu+wYn/45+vf40Ls82XwXcBMg2wWyGsDa1DAqlJRnOeu7GTHjyyskejfw4ME/dt7IJ2Hge8A+eLdA7xvM+RKGWWQjsVOM/wIoE/znvdRubnTupkykImUJFNEkSHqtJKzAQ7k0rv+AgNi4ern0zTun4o8VFgLA69nK7PlQ3M63aS87xeXhBoxQuI+seoYthdAVka7t2sQ4rIyKMkhjuYw5WY97A9kH8/vDRFdlJK4CM84gcleKExxGPqUW88XSJqBIEOOeB2KIVieev7RjuUplzf7JY9UnaPEZose1oTfHLLhDHSdVHL+mA72WiSnUW9aIPmXMKJ7fC8E11PsJPJdgTlnMpJecb5bPqbHl6e0+I8=
-  file: target/release/ddh
-  file: target/release/ddh.exe
-  on:
-    repo: darakian/ddh
+- cargo test --verbose --all
