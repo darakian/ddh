@@ -99,8 +99,8 @@ fn main() {
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
-    drop(sender);
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
+    drop(sender);
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
@@ -108,14 +108,28 @@ fn main() {
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
         rayon::join(|| hash_and_update(a), || hash_and_update(b));
-        if a.file_hash==b.file_hash {
-            b.file_paths.extend(a.file_paths.drain());
-            true
-        } else {false}
+        // hash_and_update(a);
+        // hash_and_update(b);
+        // if a==b {
+        //     b.file_paths.extend(a.file_paths.drain());
+        //     false
+        // } else {false}
+        false
     } else {false});
+    //println!("complete_files.len = {:?}", complete_files.len());
+
+    complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash));
+    //println!("complete_files.len = {:?}", complete_files.len());
+
+    complete_files.dedup_by(|a, b| if a==b{
+        b.file_paths.extend(a.file_paths.drain());
+        true
+    }else{false});
+    //println!("complete_files.len = {:?}", complete_files.len());
 
 
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
+
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
     complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
     blocksize);
@@ -128,8 +142,8 @@ fn main() {
     match arguments.value_of("Print").unwrap_or(""){
         "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
         "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x}:", x.file_hash);
-            x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}", y.to_str().unwrap()));
+            println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.par_iter().for_each(|x| {
@@ -162,12 +176,12 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
-    if current_path.is_file(){
-        sender.send(Fileinfo::new(0, current_path.metadata().unwrap().len(), current_path.to_path_buf())).unwrap();
-    } else {
+    if current_path.is_dir(){
         let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|r| r.unwrap()).collect();
         paths.par_iter().for_each_with(sender, |s, dir_entry| {
             traverse_and_spawn(dir_entry.path().as_path(), s.clone());
         });
+    } else {
+        sender.send(Fileinfo::new(0, current_path.metadata().unwrap().len(), current_path.to_path_buf())).unwrap();
     }
 }
