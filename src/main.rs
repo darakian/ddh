@@ -108,7 +108,7 @@ fn main() {
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
         rayon::join(|| hash_and_update(a), || hash_and_update(b));
-        if a==b {
+        if a.file_hash==b.file_hash {
             b.file_paths.extend(a.file_paths.drain());
             true
         } else {false}
@@ -155,6 +155,7 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
                 }
             }
             input.file_hash=hasher.finish();
+            assert_ne!(input.file_hash, 0);
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().unwrap())}
     }
