@@ -3,7 +3,9 @@ rust:
 - stable
 script:
 - mkdir lets_see_what_travis_allows
-- git clone https://git.kernel.org/ lets_see_what_travis_allows
+- cd lets_see_what_travis_allows
+- wget -r https://www.kernel.org/pub/
+- cd ..
 - cargo build --verbose --all
 - cargo test --verbose --all
 - cargo clean
