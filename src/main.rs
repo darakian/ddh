@@ -129,7 +129,7 @@ fn main() {
     //println!("complete_files.len = {:?}", complete_files.len());
 
     complete_files.dedup_by(|a, b| if a==b{
-        b.file_paths.extend(a.file_paths.drain(1..));
+        b.file_paths.extend(a.file_paths.drain(0..));
         true
     }else{false});
     //println!("complete_files.len = {:?}", complete_files.len());
