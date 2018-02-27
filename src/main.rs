@@ -7,7 +7,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::cmp::Ordering;
 use std::fs::{self};
@@ -15,6 +14,8 @@ use std::fs::{self};
 //External imports
 extern crate clap;
 extern crate rayon;
+extern crate itertools;
+use itertools::Itertools;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
@@ -22,13 +23,13 @@ use rayon::prelude::*;
 struct Fileinfo{
     file_hash: u64,
     file_len: u64,
-    file_paths: HashSet<PathBuf>,
+    file_paths: Vec<PathBuf>,
 }
 
 impl Fileinfo{
     fn new(hash: u64, length: u64, path: PathBuf) -> Self{
-        let mut set = HashSet::<PathBuf>::new();
-        set.insert(path);
+        let mut set = Vec::<PathBuf>::new();
+        set.push(path);
         Fileinfo{file_hash: hash, file_len: length, file_paths: set}
     }
 }
@@ -106,10 +107,15 @@ fn main() {
     }
 
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
+
+    //complete_files.iter().group_by(|x| x.file_len).for_each();
+
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
         rayon::join(|| hash_and_update(a), || hash_and_update(b));
-        // hash_and_update(a);
-        // hash_and_update(b);
+        // rayon::spawn(|| hash_and_update(a));
+        // rayon::spawn(|| hash_and_update(b));
+        //hash_and_update(a);
+        //hash_and_update(b);
         // if a==b {
         //     b.file_paths.extend(a.file_paths.drain());
         //     false
@@ -119,10 +125,11 @@ fn main() {
     //println!("complete_files.len = {:?}", complete_files.len());
 
     complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash));
+
     //println!("complete_files.len = {:?}", complete_files.len());
 
     complete_files.dedup_by(|a, b| if a==b{
-        b.file_paths.extend(a.file_paths.drain());
+        b.file_paths.extend(a.file_paths.drain(1..));
         true
     }else{false});
     //println!("complete_files.len = {:?}", complete_files.len());
