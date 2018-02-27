@@ -113,11 +113,11 @@ fn main() {
         // s.spawn(|_| hash_and_update(a));
         // s.spawn(|_| hash_and_update(b));
         // });
-        rayon::join(|| hash_and_update(a), || hash_and_update(b));
+        //rayon::join(|| hash_and_update(a), || hash_and_update(b));
         // rayon::spawn(|| hash_and_update(a));
         // rayon::spawn(|| hash_and_update(b));
-        // hash_and_update(a);
-        // hash_and_update(b);
+        hash_and_update(a);
+        hash_and_update(b);
         // if a==b {
         //     b.file_paths.extend(a.file_paths.drain());
         //     false
