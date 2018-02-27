@@ -105,6 +105,7 @@ fn main() {
     }
 
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
+    //Sweep and mark for hashing
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
         a.file_hash=1;
         b.file_hash=1;
@@ -116,7 +117,7 @@ fn main() {
         b.file_paths.extend(a.file_paths.drain(0..));
         true
     }else{false});
-    //O(n^4) :(
+    //O(2nlog(n)+2n) :(
 
 
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
