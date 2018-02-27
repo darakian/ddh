@@ -14,8 +14,6 @@ use std::fs::{self};
 //External imports
 extern crate clap;
 extern crate rayon;
-extern crate itertools;
-use itertools::Itertools;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
@@ -111,11 +109,15 @@ fn main() {
     //complete_files.iter().group_by(|x| x.file_len).for_each();
 
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
-        rayon::join(|| hash_and_update(a), || hash_and_update(b));
+        // rayon::scope(|s| {
+        // s.spawn(|_| hash_and_update(a));
+        // s.spawn(|_| hash_and_update(b));
+        // });
+        //rayon::join(|| hash_and_update(a), || hash_and_update(b));
         // rayon::spawn(|| hash_and_update(a));
         // rayon::spawn(|| hash_and_update(b));
-        //hash_and_update(a);
-        //hash_and_update(b);
+        hash_and_update(a);
+        hash_and_update(b);
         // if a==b {
         //     b.file_paths.extend(a.file_paths.drain());
         //     false
@@ -162,6 +164,9 @@ fn main() {
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
+    if input.file_hash != 0{
+        return
+    }
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().unwrap()) {
         Ok(f) => {
