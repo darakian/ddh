@@ -2,13 +2,8 @@ language: rust
 rust:
 - stable
 script:
-- mkdir lets_see_what_travis_allows
-- cd lets_see_what_travis_allows
-- wget -r https://www.kernel.org/pub/
-- cd ..
 - cargo build --verbose --all
 - cargo test --verbose --all
 - cargo clean
 - cargo build --release --all
 - cargo test --verbose --all
-- time -l ddh lets_see_what_travis_allows
