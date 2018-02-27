@@ -178,9 +178,6 @@ fn main() {
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
-    if input.file_hash != 0{
-        return
-    }
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().unwrap()) {
         Ok(f) => {
