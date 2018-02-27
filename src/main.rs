@@ -139,13 +139,22 @@ fn main() {
 
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
 
+    //Print main output
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
     complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
     blocksize);
-    println!("{} Total files (without duplicates): {} {}", complete_files.len(), (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor), blocksize);
-    println!("{} Single instance files: {} {}", unique_files.len(), unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize);
-    println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(),
-    shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor), blocksize,
+    println!("{} Total files (without duplicates): {} {}",
+    complete_files.len(),
+    (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor),
+    blocksize);
+    println!("{} Single instance files: {} {}",
+    unique_files.len(),
+    unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
+    blocksize);
+    println!("{} Shared instance files: {} {} ({} instances)",
+    shared_files.len(),
+    shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
+    blocksize,
     shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
 
     match arguments.value_of("Print").unwrap_or(""){
