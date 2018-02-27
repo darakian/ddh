@@ -103,12 +103,16 @@ fn main() {
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
-
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len));
 
-    //complete_files.iter().group_by(|x| x.file_len).for_each();
+
+    //.filter(|a| (a.file_len>0)&&complete_files.par_iter().filter(|b| b.file_len==a.file_len).count()>1)
+    //.for_each(|mut c| hash_and_update(&mut c));
+    //complete_files.par_iter().partition(|x|)
 
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len {
+        a.file_hash=1;
+        b.file_hash=1;
         // rayon::scope(|s| {
         // s.spawn(|_| hash_and_update(a));
         // s.spawn(|_| hash_and_update(b));
@@ -116,15 +120,16 @@ fn main() {
         //rayon::join(|| hash_and_update(a), || hash_and_update(b));
         // rayon::spawn(|| hash_and_update(a));
         // rayon::spawn(|| hash_and_update(b));
-        hash_and_update(a);
-        hash_and_update(b);
+        //hash_and_update(a);
+        //hash_and_update(b);
         // if a==b {
         //     b.file_paths.extend(a.file_paths.drain());
         //     false
         // } else {false}
         false
     } else {false});
-    //println!("complete_files.len = {:?}", complete_files.len());
+    complete_files.par_iter_mut().filter(|a| a.file_hash==1).for_each(|b| hash_and_update(b));
+
 
     complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash));
 
