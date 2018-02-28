@@ -59,10 +59,10 @@ impl Hash for Fileinfo{
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                          .version("0.9.3")
-                          .author("Jon Moroney jmoroney@hawaii.edu")
-                          .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
-                          .arg(Arg::with_name("directories")
+                        .version("0.9.3")
+                        .author("Jon Moroney jmoroney@hawaii.edu")
+                        .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
+                        .arg(Arg::with_name("directories")
                                .short("d")
                                .long("directories")
                                .case_insensitive(true)
@@ -72,7 +72,7 @@ fn main() {
                                .required(true)
                                .takes_value(true)
                                .index(1))
-                          .arg(Arg::with_name("Blocksize")
+                        .arg(Arg::with_name("Blocksize")
                                .short("b")
                                .long("blocksize")
                                .case_insensitive(true)
@@ -80,15 +80,19 @@ fn main() {
                                .max_values(1)
                                .possible_values(&["B", "K", "M", "G"])
                                .help("Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is Kilobytes."))
-                          .arg(Arg::with_name("Print")
+                        .arg(Arg::with_name("Print")
                                 .short("p")
                                 .long("print")
                                 .possible_values(&["single", "shared", "csv"])
                                 .case_insensitive(true)
                                 .takes_value(true)
-                                .help("Print Single Instance or Shared Instance files.")
-                            )
-                          .get_matches();
+                                .help("Print Single Instance or Shared Instance files."))
+                        .arg(Arg::with_name("Mega")
+                                  .short("m")
+                                  .long("mega")
+                                  .takes_value(false)
+                                  .help("Mega mode. Optimizes for large file collections"))
+                        .get_matches();
 
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Kilobytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 1};
@@ -104,6 +108,11 @@ fn main() {
         complete_files.push(entry);
     }
 
+    match arguments.value_of("Mega").is_set() {
+        megazord => println!("{}", megazord),
+        //false => println!("No"),
+        _ => return
+    }
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
     //Sweep and mark for hashing
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
