@@ -164,14 +164,14 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
                 match buffer_reader.read(&mut hash_buffer) {
                     Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
                     Ok(n) if n==0 => break,
-                    Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().unwrap()),
-                    _ => println!("Should ne be here"),
+                    Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
+                    _ => println!("Should not be here"),
                 }
             }
             input.file_hash=hasher.finish();
             assert_ne!(input.file_hash, 0);
         }
-        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().unwrap())}
+        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
 }
 
