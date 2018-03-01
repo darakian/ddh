@@ -176,7 +176,7 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
-    if current_path.is_dir(){
+    if current_path.exists()&&current_path.is_dir(){
         let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|a| a.ok().expect("Unable to open directory for traversal")).collect();
         paths.par_iter().for_each_with(sender, |s, dir_entry| {
             traverse_and_spawn(dir_entry.path().as_path(), s.clone());
