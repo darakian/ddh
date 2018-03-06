@@ -10,3 +10,5 @@ rayon = "1.0"
 [profile.release]
 lto = true
 debug=false
+opt-level = 3
+codegen-units = 1
