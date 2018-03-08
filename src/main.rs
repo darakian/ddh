@@ -101,11 +101,6 @@ fn main() {
     drop(sender);
     for entry in receiver.iter(){
         complete_files.push(entry);
-        complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
-            a.file_hash=1;
-            b.file_hash=1;
-            false
-        } else {false});
     }
 
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
