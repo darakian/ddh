@@ -9,11 +9,12 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::collections::hash_map::DefaultHasher;
 use std::cmp::Ordering;
-use std::fs::{self};
+use std::fs::{self, File};
 
 //External imports
 extern crate clap;
 extern crate rayon;
+extern crate flame;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
@@ -83,7 +84,7 @@ fn main() {
                         .arg(Arg::with_name("Print")
                                 .short("p")
                                 .long("print")
-                                .possible_values(&["single", "shared", "csv"])
+                                .possible_values(&["single", "shared", "csv", "stats"])
                                 .case_insensitive(true)
                                 .takes_value(true)
                                 .help("Print Single Instance or Shared Instance files."))
@@ -94,32 +95,53 @@ fn main() {
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().collect();
+    flame::start("Directory traversal");
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     drop(sender);
+    flame::end("Directory traversal");
+    flame::start("Collect file entries.");
     for entry in receiver.iter(){
         complete_files.push(entry);
     }
+    flame::end("Collect file entries.");
 
+    flame::start("Sort file entries by length.");
     complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
+    flame::end("Sort file entries by length.");
+
+    flame::start("Sweep and mark for hashing.");
     //Sweep and mark for hashing
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
         a.file_hash=1;
         b.file_hash=1;
         false
     } else {false});
-    complete_files.par_iter_mut().filter(|a| a.file_hash==1).for_each(|b| hash_and_update(b)); //O(n)
+    flame::end("Sweep and mark for hashing.");
+
+    flame::start("Hash files of the same length.");
+    //flame::span_of("database query", || query_database());
+    complete_files.par_iter_mut().filter(|a| a.file_hash==1).for_each(|b| {flame::start("Hashing");hash_and_update(b);flame::end("Hashing");}); //O(n)
+    flame::end("Hash files of the same length.");
+
+    flame::start("Sort file entries by hash.");
     complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
+    flame::end("Sort file entries by hash.");
+
+    flame::start("Sweep and dedup by hash");
     complete_files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
         true
     }else{false});
     //O(2nlog(n)+2n) :(
+    flame::end("Sweep and dedup by hash");
 
 
+    flame::start("Partition into duplicates and singletons.");
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
+    flame::end("Partition into duplicates and singletons.");
 
     //Print main output
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
@@ -151,7 +173,10 @@ fn main() {
             shared_files.iter().for_each(|x| {
                 x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
         },
+        "stats" => {flame::dump_stdout();},
         _ => {}};
+
+
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
@@ -160,6 +185,7 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
             let mut hash_buffer = [0;32768];
+            //flame::start("Begin Hash loop");
             loop {
                 match buffer_reader.read(&mut hash_buffer) {
                     Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
@@ -168,6 +194,7 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
                     _ => println!("Should not be here"),
                 }
             }
+            //flame::end("End Hash loop");
             input.file_hash=hasher.finish();
             assert_ne!(input.file_hash, 0);
         }
