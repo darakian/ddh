@@ -9,7 +9,7 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
 use std::collections::hash_map::DefaultHasher;
 use std::cmp::Ordering;
-use std::fs::{self, File};
+use std::fs::{self/*, File*/};
 
 //External imports
 extern crate clap;
@@ -99,9 +99,9 @@ fn main() {
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
+    flame::end("Directory traversal");
     let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     drop(sender);
-    flame::end("Directory traversal");
     flame::start("Collect file entries.");
     for entry in receiver.iter(){
         complete_files.push(entry);
@@ -122,8 +122,7 @@ fn main() {
     flame::end("Sweep and mark for hashing.");
 
     flame::start("Hash files of the same length.");
-    //flame::span_of("database query", || query_database());
-    complete_files.par_iter_mut().filter(|a| a.file_hash==1).for_each(|b| {flame::start("Hashing");hash_and_update(b);flame::end("Hashing");}); //O(n)
+    complete_files.par_iter_mut().filter(|a| a.file_hash==1).for_each(|b| hash_and_update(b)); //O(n)
     flame::end("Hash files of the same length.");
 
     flame::start("Sort file entries by hash.");
@@ -175,8 +174,7 @@ fn main() {
         },
         "stats" => {flame::dump_stdout();},
         _ => {}};
-
-
+        //flame::dump_html(&mut File::create("flame-graph.html").unwrap()).unwrap();
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
