@@ -23,13 +23,15 @@ struct Fileinfo{
     file_hash: u64,
     file_len: u64,
     file_paths: Vec<PathBuf>,
+    hashed: bool,
+    to_hash: bool,
 }
 
 impl Fileinfo{
     fn new(hash: u64, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
-        Fileinfo{file_hash: hash, file_len: length, file_paths: set}
+        Fileinfo{file_hash: hash, file_len: length, file_paths: set, hashed: false, to_hash: false}
     }
 }
 
@@ -115,14 +117,14 @@ fn main() {
     flame::start("Sweep and mark for hashing.");
     //Sweep and mark for hashing
     complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
-        a.file_hash=1;
-        b.file_hash=1;
+        a.to_hash=true;
+        b.to_hash=true;
         false
     } else {false});
     flame::end("Sweep and mark for hashing.");
 
     flame::start("Hash files of the same length.");
-    complete_files.par_iter_mut().filter(|a| a.file_hash==1).for_each(|b| hash_and_update(b)); //O(n)
+    complete_files.par_iter_mut().filter(|a| a.to_hash==true).for_each(|b| hash_and_update(b)); //O(n)
     flame::end("Hash files of the same length.");
 
     flame::start("Sort file entries by hash.");
@@ -159,6 +161,7 @@ fn main() {
     shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
     blocksize,
     shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
+    //println!("\n>>> # of Files that were fully hashed and didn't need to be {:?}\n", unique_files.iter().filter(|x| x.file_hash!=0).count());
 
     match arguments.value_of("Print").unwrap_or(""){
         "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
@@ -178,6 +181,9 @@ fn main() {
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
+    if input.hashed==true{
+        return
+    }
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().expect("Error opening file for hashing")) {
         Ok(f) => {
@@ -194,7 +200,7 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
             }
             //flame::end("End Hash loop");
             input.file_hash=hasher.finish();
-            assert_ne!(input.file_hash, 0);
+            input.hashed=true;
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
