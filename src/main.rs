@@ -181,6 +181,7 @@ fn main() {
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
+    //flame::start("Hashing");
     if input.hashed==true{
         return
     }
@@ -189,7 +190,6 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
             let mut hash_buffer = [0;32768];
-            //flame::start("Begin Hash loop");
             loop {
                 match buffer_reader.read(&mut hash_buffer) {
                     Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
@@ -198,12 +198,12 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
                     _ => println!("Should not be here"),
                 }
             }
-            //flame::end("End Hash loop");
             input.file_hash=hasher.finish();
             input.hashed=true;
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
+    //flame::end("Hashing");
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
