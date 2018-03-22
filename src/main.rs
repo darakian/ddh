@@ -7,7 +7,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Sender;
-use std::collections::hash_map::DefaultHasher;
+use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
 use std::cmp::Ordering;
 use std::fs::{self/*, File*/};
 
@@ -17,6 +17,10 @@ extern crate rayon;
 extern crate flame;
 use clap::{Arg, App};
 use rayon::prelude::*;
+
+//Itertools
+// extern crate itertools;
+// use itertools::Itertools;
 
 #[derive(Debug)]
 struct Fileinfo{
@@ -86,7 +90,7 @@ fn main() {
                         .arg(Arg::with_name("Print")
                                 .short("p")
                                 .long("print")
-                                .possible_values(&["single", "shared", "csv", "stats"])
+                                .possible_values(&["single", "shared", "csv"])
                                 .case_insensitive(true)
                                 .takes_value(true)
                                 .help("Print Single Instance or Shared Instance files."))
@@ -97,91 +101,84 @@ fn main() {
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().collect();
-    flame::start("Directory traversal");
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
-    flame::end("Directory traversal");
-    let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
-    drop(sender);
-    flame::start("Collect file entries.");
-    for entry in receiver.iter(){
-        complete_files.push(entry);
-    }
-    flame::end("Collect file entries.");
 
-    flame::start("Sort file entries by length.");
-    complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
-    flame::end("Sort file entries by length.");
+    //Old mode
 
-    flame::start("Sweep and mark for hashing.");
-    //Sweep and mark for hashing
-    complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
-        a.to_hash=true;
-        b.to_hash=true;
-        false
-    } else {false});
-    flame::end("Sweep and mark for hashing.");
-
-    flame::start("Hash files of the same length.");
-    complete_files.par_iter_mut().filter(|a| a.to_hash==true).for_each(|b| hash_and_update(b)); //O(n)
-    flame::end("Hash files of the same length.");
-
-    flame::start("Sort file entries by hash.");
-    complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
-    flame::end("Sort file entries by hash.");
-
-    flame::start("Sweep and dedup by hash");
-    complete_files.dedup_by(|a, b| if a==b{ //O(n)
-        b.file_paths.extend(a.file_paths.drain(0..));
-        true
-    }else{false});
+    // let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
+    // drop(sender);
+    // for entry in receiver.iter(){
+    //     complete_files.push(entry);
+    // }
+    // complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
+    // //Sweep and mark for hashing
+    // complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
+    //     a.to_hash=true;
+    //     b.to_hash=true;
+    //     false
+    // } else {false});
+    // complete_files.par_iter_mut().filter(|a| a.to_hash==true).for_each(|b| hash_and_update(b)); //O(n)
+    // complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
+    // complete_files.dedup_by(|a, b| if a==b{ //O(n)
+    //     b.file_paths.extend(a.file_paths.drain(0..));
+    //     true
+    // }else{false});
     //O(2nlog(n)+2n) :(
-    flame::end("Sweep and dedup by hash");
+
+    //New mode
+    drop(sender);
+    let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
+    for entry in receiver.iter(){
+    match files_of_lengths.entry(entry.file_len) {
+        Entry::Vacant(e) => { e.insert(vec![entry]); },
+        Entry::Occupied(mut e) => { e.get_mut().push(entry); }
+        }
+    }
+    let complete_files = files_of_lengths.into_par_iter().for_each(|x| {
+        differentiate_and_consoloidate(x.0, x.1);
+    });
 
 
-    flame::start("Partition into duplicates and singletons.");
-    let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
-    flame::end("Partition into duplicates and singletons.");
 
-    //Print main output
-    println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
-    complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
-    blocksize);
-    println!("{} Total files (without duplicates): {} {}",
-    complete_files.len(),
-    (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor),
-    blocksize);
-    println!("{} Single instance files: {} {}",
-    unique_files.len(),
-    unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
-    blocksize);
-    println!("{} Shared instance files: {} {} ({} instances)",
-    shared_files.len(),
-    shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
-    blocksize,
-    shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
-    //println!("\n>>> # of Files that were fully hashed and didn't need to be {:?}\n", unique_files.iter().filter(|x| x.file_hash!=0).count());
-
-    match arguments.value_of("Print").unwrap_or(""){
-        "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
-        "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
-            println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
-        },
-        "csv" => {unique_files.par_iter().for_each(|x| {
-                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
-            shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
-        },
-        "stats" => {flame::dump_stdout();},
-        _ => {}};
-        //flame::dump_html(&mut File::create("flame-graph.html").unwrap()).unwrap();
+    //
+    // let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
+    //
+    // //Print main output
+    // println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
+    // complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
+    // blocksize);
+    // println!("{} Total files (without duplicates): {} {}",
+    // complete_files.len(),
+    // (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor),
+    // blocksize);
+    // println!("{} Single instance files: {} {}",
+    // unique_files.len(),
+    // unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
+    // blocksize);
+    // println!("{} Shared instance files: {} {} ({} instances)",
+    // shared_files.len(),
+    // shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
+    // blocksize,
+    // shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
+    //
+    // match arguments.value_of("Print").unwrap_or(""){
+    //     "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
+    //     "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
+    //         println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
+    //         x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
+    //         println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
+    //     },
+    //     "csv" => {unique_files.par_iter().for_each(|x| {
+    //             println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
+    //         shared_files.iter().for_each(|x| {
+    //             x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
+    //     },
+    //     _ => {}};
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
-    //flame::start("Hashing");
     if input.hashed==true{
         return
     }
@@ -203,7 +200,6 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
-    //flame::end("Hashing");
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
@@ -215,4 +211,16 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     } else if current_path.is_file() {
         sender.send(Fileinfo::new(0, current_path.metadata().unwrap().len(), current_path.to_path_buf())).unwrap();
     } else {println!("Cannot open {:?}. Skipping.", current_path);}
+}
+
+fn differentiate_and_consoloidate(file_length: u64, files: Vec<Fileinfo>) -> Vec<Fileinfo>{
+    match files.len(){
+        1 => return files,
+        n if n>1 => {
+            //Hash in stages here
+
+        },
+        _ => {}
+    }
+    files
 }
