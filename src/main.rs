@@ -106,7 +106,6 @@ fn main() {
     });
 
     //Old mode
-
     // drop(sender);
     // for entry in receiver.iter(){
     //     complete_files.push(entry);
@@ -220,7 +219,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     Ok(f) => {
                         let mut buffer_reader = BufReader::new(f);
                         let mut hash_buffer = [0;32768];
-                        for _i in 1..10 { //read 4MB
+                        for _i in 1..5 { //read 20KB
                             match buffer_reader.read(&mut hash_buffer) {
                                 Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
                                 Ok(n) if n==0 => { //No more data in the file
