@@ -66,7 +66,7 @@ impl Hash for Fileinfo{
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                        .version("0.9.3")
+                        .version("0.9.4")
                         .author("Jon Moroney jmoroney@hawaii.edu")
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
                         .arg(Arg::with_name("directories")
@@ -138,8 +138,6 @@ fn main() {
     let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter().map(|x|
         differentiate_and_consolidate(x.0, x.1)
     ).flatten().collect();
-
-
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
 
     //Print main output
@@ -238,7 +236,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 }
             });
             //Find unique elements and extend hash for similar-ish files
-            files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash));
+            files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
             files.dedup_by(|a, b| if a==b{ //O(n)
                 a.hashed=true;
                 b.hashed=true;
