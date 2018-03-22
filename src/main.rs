@@ -107,7 +107,7 @@ fn main() {
 
     //Old mode
 
-    // let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
+    let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
     // drop(sender);
     // for entry in receiver.iter(){
     //     complete_files.push(entry);
@@ -129,6 +129,7 @@ fn main() {
 
     //New mode
     drop(sender);
+    let (second_sender, second_receiver) = channel();
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
     match files_of_lengths.entry(entry.file_len) {
@@ -136,46 +137,50 @@ fn main() {
         Entry::Occupied(mut e) => { e.get_mut().push(entry); }
         }
     }
-    let complete_files = files_of_lengths.into_par_iter().for_each(|x| {
-        differentiate_and_consolidate(x.0, x.1);
+    files_of_lengths.into_par_iter().for_each_with(second_sender.clone(), |s, x| {
+        differentiate_and_consolidate(x.0, x.1).into_par_iter().for_each_with(s.clone(), |ss, y| {
+            ss.send(y).unwrap();
+        });
     });
+    drop(second_sender);
+    for mut entry in second_receiver.iter(){
+        complete_files.push(entry);
+    }
 
 
+    let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
 
-    //
-    // let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
-    //
-    // //Print main output
-    // println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
-    // complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
-    // blocksize);
-    // println!("{} Total files (without duplicates): {} {}",
-    // complete_files.len(),
-    // (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor),
-    // blocksize);
-    // println!("{} Single instance files: {} {}",
-    // unique_files.len(),
-    // unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
-    // blocksize);
-    // println!("{} Shared instance files: {} {} ({} instances)",
-    // shared_files.len(),
-    // shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
-    // blocksize,
-    // shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
-    //
-    // match arguments.value_of("Print").unwrap_or(""){
-    //     "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
-    //     "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
-    //         println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
-    //         x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
-    //         println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
-    //     },
-    //     "csv" => {unique_files.par_iter().for_each(|x| {
-    //             println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
-    //         shared_files.iter().for_each(|x| {
-    //             x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
-    //     },
-    //     _ => {}};
+    //Print main output
+    println!("{} Total files (with duplicates): {} {}", complete_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>(),
+    complete_files.par_iter().map(|x| (x.file_paths.len() as u64)*x.file_len).sum::<u64>()/(display_divisor),
+    blocksize);
+    println!("{} Total files (without duplicates): {} {}",
+    complete_files.len(),
+    (complete_files.par_iter().map(|x| x.file_len).sum::<u64>())/(display_divisor),
+    blocksize);
+    println!("{} Single instance files: {} {}",
+    unique_files.len(),
+    unique_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
+    blocksize);
+    println!("{} Shared instance files: {} {} ({} instances)",
+    shared_files.len(),
+    shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
+    blocksize,
+    shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
+
+    match arguments.value_of("Print").unwrap_or(""){
+        "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
+        "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
+            println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
+            println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
+        },
+        "csv" => {unique_files.par_iter().for_each(|x| {
+                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
+            shared_files.iter().for_each(|x| {
+                x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
+        },
+        _ => {}};
 }
 
 fn hash_and_update(input: &mut Fileinfo) -> (){
@@ -243,12 +248,21 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             //Find unique elements and extend hash for similar-ish files
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash));
             files.dedup_by(|a, b| if a==b{ //O(n)
-                //b.file_paths.extend(a.file_paths.drain(0..));
-                //true
+                a.hashed=true;
+                b.hashed=true;
                 false
             }else{false});
+            files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
+                y.hashed=false;
+                //println!("Hashing {:?}", y);
+                hash_and_update(y);
+            });
         },
         _ => {}
     }
+    files.dedup_by(|a, b| if a.hashed==true&&b.hashed==true&&a==b{ //O(n)
+        b.file_paths.extend(a.file_paths.drain(0..));
+        true
+    }else{false});
     files
 }
