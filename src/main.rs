@@ -128,10 +128,7 @@ fn main() {
 
     //New mode
     drop(sender);
-    //let (second_sender, second_receiver) = channel();
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
-    //let mut complete_files: Vec<Fileinfo> = Vec::<Fileinfo>::new();
-
     for entry in receiver.iter(){
     match files_of_lengths.entry(entry.file_len) {
         Entry::Vacant(e) => { e.insert(vec![entry]); },
@@ -141,10 +138,6 @@ fn main() {
     let complete_files: Vec<_> = files_of_lengths.into_par_iter().map(|x|
         differentiate_and_consolidate(x.0, x.1)
     ).flatten().collect();
-    //drop(second_sender);
-    // for mut entry in second_receiver.iter(){
-    //     complete_files.push(entry);
-    // }
 
 
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
