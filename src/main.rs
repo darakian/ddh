@@ -137,7 +137,7 @@ fn main() {
         }
     }
     let complete_files = files_of_lengths.into_par_iter().for_each(|x| {
-        differentiate_and_consoloidate(x.0, x.1);
+        differentiate_and_consolidate(x.0, x.1);
     });
 
 
@@ -213,11 +213,11 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     } else {println!("Cannot open {:?}. Skipping.", current_path);}
 }
 
-fn differentiate_and_consoloidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
+fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
     match files.len(){
         1 => return files,
         n if n>1 => {
-            //Hash
+            //Hash stage one
             files.par_iter_mut().for_each(|x| {
                 assert!(file_length==x.file_len);
                 let mut hasher = DefaultHasher::new();
@@ -225,10 +225,12 @@ fn differentiate_and_consoloidate(file_length: u64, mut files: Vec<Fileinfo>) ->
                     Ok(f) => {
                         let mut buffer_reader = BufReader::new(f);
                         let mut hash_buffer = [0;32768];
-                        loop {
+                        for _i in 1..10 { //read 4MB
                             match buffer_reader.read(&mut hash_buffer) {
                                 Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
-                                Ok(n) if n==0 => break,
+                                Ok(n) if n==0 => { //No more data in the file
+                                    break
+                                },
                                 Err(e) => println!("{:?} reading {:?}", e, x.file_paths.iter().next().expect("Error opening file for hashing")),
                                 _ => println!("Should not be here"),
                             }
@@ -238,8 +240,13 @@ fn differentiate_and_consoloidate(file_length: u64, mut files: Vec<Fileinfo>) ->
                     Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error opening file for hashing"))}
                 }
             });
-
-            //Find unique elements and extend hash for similar-ish files  
+            //Find unique elements and extend hash for similar-ish files
+            files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash));
+            files.dedup_by(|a, b| if a==b{ //O(n)
+                //b.file_paths.extend(a.file_paths.drain(0..));
+                //true
+                false
+            }else{false});
         },
         _ => {}
     }
