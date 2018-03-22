@@ -246,11 +246,10 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             }else{false});
             files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
                 y.hashed=false;
-                //println!("Hashing {:?}", y);
                 hash_and_update(y);
             });
         },
-        _ => {}
+        _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
     }
     files.dedup_by(|a, b| if a.hashed==true&&b.hashed==true&&a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
