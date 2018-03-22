@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
 use std::cmp::Ordering;
-use std::fs::{self/*, File*/};
+use std::fs::{self, File};
 
 //External imports
 extern crate clap;
@@ -96,6 +96,7 @@ fn main() {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
 
+
     //Old mode
     // drop(sender);
     // for entry in receiver.iter(){
@@ -125,6 +126,7 @@ fn main() {
         Entry::Occupied(mut e) => { e.get_mut().push(entry); }
         }
     }
+
     let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter().map(|x|
         differentiate_and_consolidate(x.0, x.1)
     ).flatten().collect();
@@ -210,7 +212,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 match fs::File::open(x.file_paths.iter().next().expect("Error opening file for hashing")) {
                     Ok(f) => {
                         let mut buffer_reader = BufReader::new(f);
-                        let mut hash_buffer = [0;100000]; //read 100KB
+                        let mut hash_buffer = [0;131072]; //read 128KB
                         match buffer_reader.read(&mut hash_buffer) {
                             Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
                             Ok(n) if n==0 => { //No more data in the file
@@ -226,15 +228,17 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             });
             //Find unique elements and extend hash for similar-ish files
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
-            files.dedup_by(|a, b| if a==b&&file_length>100000{ //O(n)
-                a.hashed=true;
-                b.hashed=true;
-                false
-            }else{false});
-            files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
-                y.hashed=false;
-                hash_and_update(y, 100000);
-            });
+            if file_length>131072 /*128KB*/ { //only hash again if we are not done hashing
+                files.dedup_by(|a, b| if a==b{ //O(n)
+                    a.hashed=true;
+                    b.hashed=true;
+                    false
+                }else{false});
+                files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
+                    y.hashed=false;
+                    hash_and_update(y, 131072); //Skip 128KB
+                });
+            }
         },
         _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
     }
