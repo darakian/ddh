@@ -135,7 +135,7 @@ fn main() {
         Entry::Occupied(mut e) => { e.get_mut().push(entry); }
         }
     }
-    let complete_files: Vec<_> = files_of_lengths.into_par_iter().map(|x|
+    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter().map(|x|
         differentiate_and_consolidate(x.0, x.1)
     ).flatten().collect();
 
