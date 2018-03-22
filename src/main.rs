@@ -213,12 +213,33 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     } else {println!("Cannot open {:?}. Skipping.", current_path);}
 }
 
-fn differentiate_and_consoloidate(file_length: u64, files: Vec<Fileinfo>) -> Vec<Fileinfo>{
+fn differentiate_and_consoloidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
     match files.len(){
         1 => return files,
         n if n>1 => {
-            //Hash in stages here
+            //Hash
+            files.par_iter_mut().for_each(|x| {
+                assert!(file_length==x.file_len);
+                let mut hasher = DefaultHasher::new();
+                match fs::File::open(x.file_paths.iter().next().expect("Error opening file for hashing")) {
+                    Ok(f) => {
+                        let mut buffer_reader = BufReader::new(f);
+                        let mut hash_buffer = [0;32768];
+                        loop {
+                            match buffer_reader.read(&mut hash_buffer) {
+                                Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
+                                Ok(n) if n==0 => break,
+                                Err(e) => println!("{:?} reading {:?}", e, x.file_paths.iter().next().expect("Error opening file for hashing")),
+                                _ => println!("Should not be here"),
+                            }
+                        }
+                        x.file_hash=hasher.finish();
+                    }
+                    Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error opening file for hashing"))}
+                }
+            });
 
+            //Find unique elements and extend hash for similar-ish files  
         },
         _ => {}
     }
