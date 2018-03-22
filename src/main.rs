@@ -1,12 +1,8 @@
 //Std imports
-use std::io::Read;
-use std::io::BufReader;
-use std::hash::Hash;
-use std::hash::Hasher;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::mpsc::channel;
-use std::sync::mpsc::Sender;
+use std::io::{Read, Seek, SeekFrom, BufReader};
+use std::hash::{Hash, Hasher};
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
 use std::cmp::Ordering;
 use std::fs::{self/*, File*/};
@@ -17,10 +13,6 @@ extern crate rayon;
 extern crate flame;
 use clap::{Arg, App};
 use rayon::prelude::*;
-
-//Itertools
-// extern crate itertools;
-// use itertools::Itertools;
 
 #[derive(Debug)]
 struct Fileinfo{
@@ -172,7 +164,7 @@ fn main() {
         _ => {}};
 }
 
-fn hash_and_update(input: &mut Fileinfo) -> (){
+fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
     if input.hashed==true{
         return
     }
@@ -180,6 +172,7 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
     match fs::File::open(input.file_paths.iter().next().expect("Error opening file for hashing")) {
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
+            buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
             let mut hash_buffer = [0;32768];
             loop {
                 match buffer_reader.read(&mut hash_buffer) {
@@ -218,17 +211,15 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 match fs::File::open(x.file_paths.iter().next().expect("Error opening file for hashing")) {
                     Ok(f) => {
                         let mut buffer_reader = BufReader::new(f);
-                        let mut hash_buffer = [0;32768];
-                        for _i in 1..5 { //read 20KB
-                            match buffer_reader.read(&mut hash_buffer) {
-                                Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
-                                Ok(n) if n==0 => { //No more data in the file
-                                    break
-                                },
-                                Err(e) => println!("{:?} reading {:?}", e, x.file_paths.iter().next().expect("Error opening file for hashing")),
-                                _ => println!("Should not be here"),
-                            }
+                        let mut hash_buffer = [0;100000]; //read 100KB
+                        match buffer_reader.read(&mut hash_buffer) {
+                            Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
+                            Ok(n) if n==0 => { //No more data in the file
+                            },
+                            Err(e) => println!("{:?} reading {:?}", e, x.file_paths.iter().next().expect("Error opening file for hashing")),
+                            _ => println!("Should not be here"),
                         }
+
                         x.file_hash=hasher.finish();
                     }
                     Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error opening file for hashing"))}
@@ -236,14 +227,14 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             });
             //Find unique elements and extend hash for similar-ish files
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
-            files.dedup_by(|a, b| if a==b{ //O(n)
+            files.dedup_by(|a, b| if a==b&&file_length>100000{ //O(n)
                 a.hashed=true;
                 b.hashed=true;
                 false
             }else{false});
             files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
                 y.hashed=false;
-                hash_and_update(y);
+                hash_and_update(y, 100000);
             });
         },
         _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
