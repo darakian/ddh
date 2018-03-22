@@ -10,7 +10,6 @@ use std::fs::{self/*, File*/};
 //External imports
 extern crate clap;
 extern crate rayon;
-extern crate flame;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
