@@ -210,10 +210,10 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 assert!(file_length==x.file_len);
                 let mut hasher = DefaultHasher::new();
                 match fs::File::open(x.file_paths.iter().next().expect("Error opening file for hashing")) {
-                    Ok(f) => {
-                        let mut buffer_reader = BufReader::new(f);
-                        let mut hash_buffer = [0;4096]; //read 128KB
-                        match buffer_reader.read(&mut hash_buffer) {
+                    Ok(mut f) => {
+                        //let mut buffer_reader = BufReader::new(f);
+                        let mut hash_buffer = [0;4096]; //read 4KB
+                        match f.read(&mut hash_buffer) {
                             Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
                             Ok(n) if n==0 => { //No more data in the file
                             },
@@ -225,9 +225,9 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error opening file for hashing"))}
                 }
             });
-            //Find unique elements and extend hash for similar-ish files 
+            //Find unique elements and extend hash for similar-ish files
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
-            if file_length>4096 /*128KB*/ { //only hash again if we are not done hashing
+            if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
                     a.hashed=true;
                     b.hashed=true;
@@ -235,7 +235,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 }else{false});
                 files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
                     y.hashed=false;
-                    hash_and_update(y, 4096); //Skip 128KB
+                    hash_and_update(y, 4096); //Skip 4KB
                 });
             }
         },
