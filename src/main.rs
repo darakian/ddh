@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
 use std::cmp::Ordering;
-use std::fs::{self, File};
+use std::fs::{self};
 
 //External imports
 extern crate clap;
@@ -96,28 +96,6 @@ fn main() {
         traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
 
-
-    //Old mode
-    // drop(sender);
-    // for entry in receiver.iter(){
-    //     complete_files.push(entry);
-    // }
-    // complete_files.par_sort_unstable_by(|a, b| b.file_len.cmp(&a.file_len)); //O(nlog(n))
-    // //Sweep and mark for hashing
-    // complete_files.dedup_by(|a, b| if a.file_len==b.file_len { //O(n)
-    //     a.to_hash=true;
-    //     b.to_hash=true;
-    //     false
-    // } else {false});
-    // complete_files.par_iter_mut().filter(|a| a.to_hash==true).for_each(|b| hash_and_update(b)); //O(n)
-    // complete_files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
-    // complete_files.dedup_by(|a, b| if a==b{ //O(n)
-    //     b.file_paths.extend(a.file_paths.drain(0..));
-    //     true
-    // }else{false});
-    //O(2nlog(n)+2n) :(
-
-    //New mode
     drop(sender);
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
@@ -211,7 +189,6 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 let mut hasher = DefaultHasher::new();
                 match fs::File::open(x.file_paths.iter().next().expect("Error opening file for hashing")) {
                     Ok(mut f) => {
-                        //let mut buffer_reader = BufReader::new(f);
                         let mut hash_buffer = [0;4096]; //read 4KB
                         match f.read(&mut hash_buffer) {
                             Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
