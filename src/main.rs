@@ -19,14 +19,13 @@ struct Fileinfo{
     file_len: u64,
     file_paths: Vec<PathBuf>,
     hashed: bool,
-    to_hash: bool,
 }
 
 impl Fileinfo{
     fn new(hash: u64, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
-        Fileinfo{file_hash: hash, file_len: length, file_paths: set, hashed: false, to_hash: false}
+        Fileinfo{file_hash: hash, file_len: length, file_paths: set, hashed: false}
     }
 }
 
@@ -180,6 +179,9 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
+    if file_length == 0{
+        return files
+    }
     match files.len(){
         1 => return files,
         n if n>1 => {
