@@ -5,7 +5,7 @@ The H is silent. This tool is called DDH for two very good reasons
 * DDT is a dangerous pesticide
 * I mistyped when I created the project
 
-DDH traverses input directories and their subdirectories, hashes all files found and reports findings.
+DDH traverses input directories and their subdirectories, hashes files as needed and reports findings.
 
 ## Install
 * Install [Rust](https://www.rust-lang.org/en-US/install.html)
@@ -16,7 +16,7 @@ DDH traverses input directories and their subdirectories, hashes all files found
 
 ## Example
 ```
-Directory Difference hTool 0.9.1
+Directory Difference hTool 0.9.4
 Compare and contrast directories.
 Example invocation: ddh /home/jon/downloads /home/jon/documents -p shared
 
