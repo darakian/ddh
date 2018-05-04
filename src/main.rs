@@ -147,7 +147,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
         return
     }
     let mut hasher = DefaultHasher::new();
-    match fs::File::open(input.file_paths.iter().next().expect("Error opening file for hashing")) {
+    match fs::File::open(input.file_paths.iter().next()) {
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
             buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
@@ -163,7 +163,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
             input.file_hash=hasher.finish();
             input.hashed=true;
         }
-        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
+        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error displaying path"))}
     }
 }
 
@@ -189,7 +189,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             files.par_iter_mut().for_each(|x| {
                 assert!(file_length==x.file_len);
                 let mut hasher = DefaultHasher::new();
-                match fs::File::open(x.file_paths.iter().next().expect("Error opening file for hashing")) {
+                match fs::File::open(x.file_paths.iter().next()) {
                     Ok(mut f) => {
                         let mut hash_buffer = [0;4096]; //read 4KB
                         match f.read(&mut hash_buffer) {
@@ -201,7 +201,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                         }
                         x.file_hash=hasher.finish();
                     }
-                    Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error opening file for hashing"))}
+                    Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error displaying path"))}
                 }
             });
             //Find unique elements and extend hash for similar-ish files
