@@ -147,7 +147,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
         return
     }
     let mut hasher = DefaultHasher::new();
-    match fs::File::open(input.file_paths.iter().next().unwrap()) {
+    match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
             buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
@@ -169,7 +169,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if current_path.is_dir(){
-        let paths: Vec<_> = fs::read_dir(current_path).unwrap().map(|a| a.ok().expect("Unable to open directory for traversal")).collect();
+        let paths: Vec<_> = fs::read_dir(current_path).expect("Unable to open directory for traversal").map(|a| a.ok().expect("Unable to open directory for traversal")).collect();
         paths.par_iter().for_each_with(sender, |s, dir_entry| {
             traverse_and_spawn(dir_entry.path().as_path(), s.clone());
         });
@@ -189,7 +189,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             files.par_iter_mut().for_each(|x| {
                 assert!(file_length==x.file_len);
                 let mut hasher = DefaultHasher::new();
-                match fs::File::open(x.file_paths.iter().next().unwrap()) {
+                match fs::File::open(x.file_paths.iter().next().expect("Error reading path")) {
                     Ok(mut f) => {
                         let mut hash_buffer = [0;4096]; //read 4KB
                         match f.read(&mut hash_buffer) {
