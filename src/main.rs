@@ -169,12 +169,18 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if current_path.is_dir(){
-        let paths: Vec<_> = fs::read_dir(current_path).map_err(|e| println!("{:?} for {:?}. Skipping", e.kind(), current_path)).unwrap().map(|a| a.ok().expect("Unable to open directory for traversal")).collect();
+
+        let paths: Vec<_> = fs::read_dir(current_path)
+            .map_err(|e| println!("{:?} for {:?}. Skipping", e.kind(), current_path))
+            .expect("Error with directory traversal")
+            .map(|dir_result| dir_result.expect("Error unwrapping dir_result"))
+            .collect();
+        //println!("paths = {:?}", paths);
         paths.par_iter().for_each_with(sender, |s, dir_entry| {
             traverse_and_spawn(dir_entry.path().as_path(), s.clone());
         });
     } else if current_path.is_file() {
-        sender.send(Fileinfo::new(0, current_path.metadata().unwrap().len(), current_path.to_path_buf())).unwrap();
+        sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), current_path.to_path_buf())).expect("Error with current path path_buf");
     } else {println!("Cannot open {:?}. Skipping.", current_path);}
 }
 
