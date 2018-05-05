@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
 use std::cmp::Ordering;
-use std::fs::{self};
+use std::fs::{self, DirEntry};
 
 //External imports
 extern crate clap;
@@ -168,9 +168,12 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
+    if !current_path.exists(){
+        return
+    }
+    let current_path = current_path.canonicalize().expect("Error canonicalizing path");
     if current_path.is_dir(){
-
-        let paths: Vec<_> = fs::read_dir(current_path).ok().expect("Error unwrapping").collect();
+        let paths: Vec<_> = fs::read_dir(current_path).unwrap().collect();
         //println!("paths = {:?}", paths);
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
             traverse_and_spawn(dir_entry.expect("Error unwrapping dir_entry").path().as_path(), s.clone());
