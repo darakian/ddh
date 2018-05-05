@@ -56,7 +56,7 @@ impl Hash for Fileinfo{
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                        .version("0.9.4")
+                        .version("0.9.5")
                         .author("Jon Moroney jmoroney@hawaii.edu")
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
                         .arg(Arg::with_name("directories")
@@ -173,10 +173,16 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     }
     let current_path = current_path.canonicalize().expect("Error canonicalizing path");
     if current_path.is_dir(){
-        let paths: Vec<_> = fs::read_dir(current_path).unwrap().collect();
+
+        let mut paths: Vec<DirEntry> = Vec::new();
+        //for result in fs::read_dir(current_path).collect(){
+        match fs::read_dir(current_path) {
+                Ok(read_dir_results) => read_dir_results.filter(|x| x.is_ok()).for_each(|x| paths.push(x.unwrap())),
+                Err(e) => println!("Skipping. {:?}", e.kind()),
+            }
         //println!("paths = {:?}", paths);
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
-            traverse_and_spawn(dir_entry.expect("Error unwrapping dir_entry").path().as_path(), s.clone());
+            traverse_and_spawn(dir_entry.path().as_path(), s.clone());
         });
     } else if current_path.is_file() {
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), current_path.to_path_buf())).expect("Error with current path path_buf");
