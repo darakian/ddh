@@ -128,16 +128,17 @@ fn main() {
     shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
 
     match arguments.value_of("Print").unwrap_or(""){
-        "single" => {println!("Single instance files"); unique_files.par_iter().for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().file_name().unwrap().to_str().unwrap()))},
+        "single" => {println!("Single instance files"); unique_files.par_iter()
+        .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().to_str().unwrap()))},
         "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
             println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
             x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.par_iter().for_each(|x| {
-                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
+                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().to_str().unwrap(), x.file_len)});
             shared_files.iter().for_each(|x| {
-                x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.canonicalize().unwrap().to_str().unwrap(), x.file_len));})
+                x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.to_str().unwrap(), x.file_len));})
         },
         _ => {}};
 }
@@ -185,7 +186,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
             traverse_and_spawn(dir_entry.path().as_path(), s.clone());
         });
     } else if current_path.is_file() {
-        sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), current_path.to_path_buf())).expect("Error with current path path_buf");
+        sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), fs::canonicalize(current_path).expect("Error canonicalizing path in struct creation."))).expect("Error with current path path_buf");
     } else {println!("Cannot open {:?}. Skipping.", current_path);}
 }
 
