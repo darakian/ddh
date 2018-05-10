@@ -146,7 +146,7 @@ fn main() {
         _ => {}};
 }
 
-fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
+fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (){
     if input.hashed==true{
         return
     }
@@ -156,14 +156,16 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
             buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
-            let mut hash_buffer = [0;32768];
+            let mut hash_buffer = [0;4096];
             loop {
                 match buffer_reader.read(&mut hash_buffer) {
                     Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                     Ok(n) if n==0 => break,
                     Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
                     _ => println!("Should not be here"),
-                }
+                    }
+                if pre_hash{break;}
+
             }
             input.file_hash=hasher.finish();
             input.hashed=true;
@@ -205,23 +207,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         n if n>1 => {
             //Hash stage one
             files.par_iter_mut().for_each(|x| {
-                assert!(file_length==x.file_len);
-                assert!(x.file_paths.iter().next().expect("Error reading path from struct").is_file());
-                let mut hasher = DefaultHasher::new();
-                match fs::File::open(x.file_paths.iter().next().expect("Error reading path")) {
-                    Ok(mut f) => {
-                        let mut hash_buffer = [0;4096]; //read 4KB
-                        match f.read(&mut hash_buffer) {
-                            Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
-                            Ok(n) if n==0 => { //No more data in the file
-                            },
-                            Err(e) => println!("{:?} reading {:?}", e, x.file_paths.iter().next().expect("Error opening file for hashing")),
-                            _ => println!("Should not be here"),
-                        }
-                        x.file_hash=hasher.finish();
-                    }
-                    Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, x.file_paths.iter().next().expect("Error opening file for hashing"))}
-                }
+                hash_and_update(x, 0, true);
             });
             //Find unique elements and extend hash for similar-ish files
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
@@ -233,7 +219,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 }else{false});
                 files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
                     y.hashed=false;
-                    hash_and_update(y, 4096); //Skip 4KB
+                    hash_and_update(y, 4096, false); //Skip 4KB
                 });
             }
         },
