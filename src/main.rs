@@ -19,14 +19,14 @@ struct Fileinfo{
     file_hash: u64,
     file_len: u64,
     file_paths: Vec<PathBuf>,
-    hashed: bool,
+    mark_rehash: bool,
 }
 
 impl Fileinfo{
     fn new(hash: u64, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
-        Fileinfo{file_hash: hash, file_len: length, file_paths: set, hashed: false}
+        Fileinfo{file_hash: hash, file_len: length, file_paths: set, mark_rehash: false}
     }
 }
 
@@ -147,9 +147,6 @@ fn main() {
 }
 
 fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (){
-    if input.hashed==true{
-        return
-    }
     assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
@@ -167,7 +164,6 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (
                 if pre_hash{break}
             }
             input.file_hash=hasher.finish();
-            input.hashed=true;
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
@@ -211,12 +207,11 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
-                    a.hashed=true;
-                    b.hashed=true;
+                    a.mark_rehash=true;
+                    b.mark_rehash=true;
                     false
                 }else{false});
-                files.par_iter_mut().filter(|x| x.hashed==true).for_each(|file_ref| {
-                    file_ref.hashed=false;
+                files.par_iter_mut().filter(|x| x.mark_rehash==true).for_each(|file_ref| {
                     hash_and_update(file_ref, 4096, false); //Skip 4KB
                 });
             }
@@ -225,6 +220,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
+        drop(a);
         true
     }else{false});
     files
