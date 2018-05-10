@@ -158,7 +158,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
             let mut hash_buffer = [0;32768];
             loop {
                 match buffer_reader.read(&mut hash_buffer) {
-                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
+                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                     Ok(n) if n==0 => break,
                     Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
                     _ => println!("Should not be here"),
@@ -210,7 +210,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     Ok(mut f) => {
                         let mut hash_buffer = [0;4096]; //read 4KB
                         match f.read(&mut hash_buffer) {
-                            Ok(n) if n>0 => hasher.write(&hash_buffer[0..n]),
+                            Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                             Ok(n) if n==0 => { //No more data in the file
                             },
                             Err(e) => println!("{:?} reading {:?}", e, x.file_paths.iter().next().expect("Error opening file for hashing")),
