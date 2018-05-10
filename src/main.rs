@@ -175,7 +175,6 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if !current_path.exists(){
         return
     }
-
     let current_path = current_path.canonicalize().expect("Error canonicalizing path");
     if current_path.is_dir(){
 
@@ -193,7 +192,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
         });
     } else if current_path.is_file() {
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), fs::canonicalize(current_path).expect("Error canonicalizing path in struct creation."))).expect("Error with current path path_buf");
-    } else {println!("Cannot open {:?}. Skipping.", current_path);}
+    } else {println!("Cannot open {:?}. Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));}
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
