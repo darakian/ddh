@@ -10,6 +10,7 @@ use std::fs::{self, DirEntry};
 //External imports
 extern crate clap;
 extern crate rayon;
+extern crate stacker;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
@@ -92,7 +93,9 @@ fn main() {
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().map(|x| fs::canonicalize(x).expect("Error canonicalizing input")).collect();
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
-        traverse_and_spawn(Path::new(&search_dir), s.clone());
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+            traverse_and_spawn(Path::new(&search_dir), s.clone());
+        });
     });
 
     drop(sender);
@@ -172,6 +175,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if !current_path.exists(){
         return
     }
+
     let current_path = current_path.canonicalize().expect("Error canonicalizing path");
     if current_path.is_dir(){
 
@@ -183,7 +187,9 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
             }
         //println!("paths = {:?}", paths);
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
+            stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             traverse_and_spawn(dir_entry.path().as_path(), s.clone());
+            });
         });
     } else if current_path.is_file() {
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), fs::canonicalize(current_path).expect("Error canonicalizing path in struct creation."))).expect("Error with current path path_buf");

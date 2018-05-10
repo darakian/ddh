@@ -6,6 +6,7 @@ authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 [dependencies]
 clap = "2.30.0"
 rayon = "1.0"
+stacker = "0.1"
 
 [profile.release]
 lto = true
