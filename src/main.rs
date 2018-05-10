@@ -164,8 +164,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (
                     Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
                     _ => println!("Should not be here"),
                     }
-                if pre_hash{break;}
-
+                if pre_hash{break}
             }
             input.file_hash=hasher.finish();
             input.hashed=true;
@@ -199,17 +198,16 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
-    if file_length == 0{
+    if file_length==0 || files.len()==0{
         return files
     }
     match files.len(){
         1 => return files,
         n if n>1 => {
             //Hash stage one
-            files.par_iter_mut().for_each(|x| {
-                hash_and_update(x, 0, true);
+            files.par_iter_mut().for_each(|file_ref| {
+                hash_and_update(file_ref, 0, true);
             });
-            //Find unique elements and extend hash for similar-ish files
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
@@ -217,15 +215,15 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     b.hashed=true;
                     false
                 }else{false});
-                files.par_iter_mut().filter(|x| x.hashed==true).for_each(|y| {
-                    y.hashed=false;
-                    hash_and_update(y, 4096, false); //Skip 4KB
+                files.par_iter_mut().filter(|x| x.hashed==true).for_each(|file_ref| {
+                    file_ref.hashed=false;
+                    hash_and_update(file_ref, 4096, false); //Skip 4KB
                 });
             }
         },
         _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
     }
-    files.dedup_by(|a, b| if a.hashed==true&&b.hashed==true&&a==b{ //O(n)
+    files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
         true
     }else{false});
