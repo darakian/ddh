@@ -150,6 +150,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64) -> (){
     if input.hashed==true{
         return
     }
+    assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
         Ok(f) => {
@@ -205,6 +206,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             //Hash stage one
             files.par_iter_mut().for_each(|x| {
                 assert!(file_length==x.file_len);
+                assert!(x.file_paths.iter().next().expect("Error reading path from struct").is_file());
                 let mut hasher = DefaultHasher::new();
                 match fs::File::open(x.file_paths.iter().next().expect("Error reading path")) {
                     Ok(mut f) => {
