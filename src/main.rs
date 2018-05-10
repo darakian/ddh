@@ -57,7 +57,7 @@ impl Hash for Fileinfo{
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                        .version("0.9.5")
+                        .version("0.9.6")
                         .author("Jon Moroney jmoroney@hawaii.edu")
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
                         .arg(Arg::with_name("directories")
@@ -188,7 +188,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
         //println!("paths = {:?}", paths);
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
             stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-            traverse_and_spawn(dir_entry.path().as_path(), s.clone());
+                traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
     } else if current_path.is_file() {
