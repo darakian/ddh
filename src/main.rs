@@ -170,12 +170,11 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
-    if !current_path.exists(){
+    if !current_path.exists() || current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
         return
     }
     let current_path = current_path.canonicalize().expect("Error canonicalizing path");
     if current_path.is_dir(){
-
         let mut paths: Vec<DirEntry> = Vec::new();
         //for result in fs::read_dir(current_path).collect(){
         match fs::read_dir(current_path) {
@@ -188,7 +187,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                 traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
-    } else if current_path.is_file() {
+    } else if current_path.is_file(){
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), fs::canonicalize(current_path).expect("Error canonicalizing path in struct creation."))).expect("Error with current path path_buf");
     } else {println!("Cannot open {:?}. Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));}
 }
