@@ -219,7 +219,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
-        drop(a);
+        //drop(a);
         true
     }else{false});
     files
