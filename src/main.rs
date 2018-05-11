@@ -132,14 +132,14 @@ fn main() {
 
     match arguments.value_of("Print").unwrap_or(""){
         "single" => {println!("Single instance files"); unique_files.par_iter()
-        .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().to_str().unwrap()))},
+        .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()))},
         "shared" => {println!("Shared instance files and instances"); shared_files.iter().for_each(|x| {
             println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.to_str().unwrap()));
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap()));
             println!("Total disk usage {} {}", ((x.file_paths.len() as u64)*x.file_len)/display_divisor, blocksize)})
         },
         "csv" => {unique_files.par_iter().for_each(|x| {
-                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().to_str().unwrap(), x.file_len)});
+                println!(/*"{:x}, */"{}, {}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap(), x.file_len)});
             shared_files.iter().for_each(|x| {
                 x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.to_str().unwrap(), x.file_len));})
         },
@@ -187,9 +187,9 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                 traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
-    } else if current_path.is_file() && !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
-        let current_path = current_path.canonicalize().expect("Error canonicalizing path");
-        sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), fs::canonicalize(current_path).expect("Error canonicalizing path in struct creation."))).expect("Error with current path path_buf");
+    } else if current_path.is_file() /*&& !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink()*/{
+        //let current_path = current_path.canonicalize().expect("Error canonicalizing path");
+        sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error with current path path_buf");
     } else if !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
         println!("Cannot open {:?}. Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));
     } else {}
@@ -221,8 +221,9 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
-        //a.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
+        a.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         b.file_paths.extend(a.file_paths.drain(0..));
+        //b.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         drop(a);
         true
     }else{false});
