@@ -187,7 +187,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                 traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
-    } else if current_path.is_file() /*&& !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink()*/{
+    } else if current_path.is_file() && !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
         //let current_path = current_path.canonicalize().expect("Error canonicalizing path");
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error with current path path_buf");
     } else if !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
@@ -221,9 +221,9 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
-        a.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
+        //a.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         b.file_paths.extend(a.file_paths.drain(0..));
-        b.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
+        //b.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         drop(a);
         true
     }else{false});
