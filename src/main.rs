@@ -170,10 +170,10 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
-    if !current_path.exists() || current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
+    if !current_path.exists(){
         return
     }
-    let current_path = current_path.canonicalize().expect("Error canonicalizing path");
+
     if current_path.is_dir(){
         let mut paths: Vec<DirEntry> = Vec::new();
         //for result in fs::read_dir(current_path).collect(){
@@ -187,9 +187,12 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                 traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
-    } else if current_path.is_file(){
+    } else if current_path.is_file() && !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
+        let current_path = current_path.canonicalize().expect("Error canonicalizing path");
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), fs::canonicalize(current_path).expect("Error canonicalizing path in struct creation."))).expect("Error with current path path_buf");
-    } else {println!("Cannot open {:?}. Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));}
+    } else if !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
+        println!("Cannot open {:?}. Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));
+    } else {}
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
@@ -218,6 +221,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
+        //a.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         b.file_paths.extend(a.file_paths.drain(0..));
         drop(a);
         true
