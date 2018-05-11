@@ -223,7 +223,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     files.dedup_by(|a, b| if a==b{ //O(n)
         a.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         b.file_paths.extend(a.file_paths.drain(0..));
-        //b.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
+        b.file_paths.retain(|x| !x.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink());
         drop(a);
         true
     }else{false});
