@@ -1,6 +1,7 @@
 language: rust
 
-branch:
+branches:
+  only:
   - master
   - release
 
