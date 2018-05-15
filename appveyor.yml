@@ -20,11 +20,6 @@ after_test:
 artifacts:
 - path: target/release/ddh.exe
   name: ddh
-before_deploy:
-- cmd: >-
-    dir
-
-    dir target/release
 deploy:
 - provider: GitHub
   description: DDH windows build
