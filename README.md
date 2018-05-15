@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/darakian/ddh.svg?branch=master)](https://travis-ci.org/darakian/ddh)
+[![Build status](https://ci.appveyor.com/api/projects/status/wv7tcfn0a7grjnv6?svg=true)](https://ci.appveyor.com/project/darakian/ddh)
 
 # The **D**irectory **D**ifferential **h**Tool
 The H is silent. This tool is called DDH for two very good reasons
