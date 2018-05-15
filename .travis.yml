@@ -9,6 +9,7 @@ script:
 - cargo test --verbose --all
 deploy:
   provider: releases
+  tag: linux64
   api_key:
     secure: lhBKrceBz3xvIGuYjc9kupCmf07jbPjoWPPaumo+FOcc49W/L4AQ6d0wEB93QSELlYDh32PJHeuNk+4/USPZ0Dtp9cJ2u7feZVW90qZS/SCwb5MP5FjxjExkS0hZto/9eXASzqkTCel0E3Uetqd46kTKLi1GAkrneDs31E8Id04bo5wF1vlV6/XVC9btWdpbLxBLPw6K7mXwzDs4/Hx9pHbch4v5zmBUOX4V7YGTkjh4dkG4ofsskDq1bJdFANea8lPRDLj78ayf0rvEN7V9CeqqYaL+JOQLw0iznGA+bORsej/z1ggvTUNKufSMyuu7GAiZBDM5qCiY6qhLk4d1/S/W0eCeQr99Ic+K9hDnpchGG9o85mphSjt27oOhb8u7w/TBFZ/YV0KLkDsEXqU9vsKxp/zQKWIcIw8tlc8o3vnRH7C1STwNQmWM7HQb/7fw6H/BEqoFRKlo+pYyk3d/kyIipov052WmWq+7Kuhb0hZsN/nWUIt1wUciivWJKyEglhD7h6CsT12Z8EGFt/bY13Bl7QbxnWAjirBEpWRxW29m+CP+6dOrRQf1oL7hn9UtxhK5hyokg+U+9VVo9vLp8Jmuqnv9bIRgGNo/1OyGS6ZgG5JG5m3xfrsKdZZIQuNLTEIbQX25+tq6w0315zmo4VNXxfNuzagCcWQ+gdXqOXc=
   file: target/release/ddh
