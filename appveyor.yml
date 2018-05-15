@@ -12,3 +12,8 @@ install:
     cargo -V
 build_script:
 - sh: cargo build --release
+after_test:
+- sh: >-
+    cargo build --verbose
+
+    cargo test
