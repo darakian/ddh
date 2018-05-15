@@ -14,15 +14,17 @@ build_script:
 - cmd: cargo build --release
 after_test:
 - cmd: >-
-    dir
-    dir target
-    dir target/release
     cargo build --verbose
 
     cargo test
 artifacts:
-- path: target\release\ddh
+- path: target/release/ddh.exe
   name: ddh
+before_deploy:
+- cmd: >-
+    dir
+
+    dir target/release
 deploy:
 - provider: GitHub
   description: DDH windows build
