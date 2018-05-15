@@ -27,4 +27,6 @@ deploy:
   auth_token:
     secure: WFr7LYW7Ios3cmmcG1YzM/etQ/xx1yGGlv37J3F9OhVcka5BdZCcTSdSo5MP08/k
   draft: false
-  prerelease: true
+  prerelease: false
+  on:
+    branch: release
