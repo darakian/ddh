@@ -12,6 +12,8 @@ install:
     cargo -V
 build_script:
 - cmd: cargo build --release
+- cmd: dir
+- cmd: dir target 
 after_test:
 - cmd: >-
     cargo build --verbose
