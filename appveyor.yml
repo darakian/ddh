@@ -1,4 +1,5 @@
 version: 9.6.{build}
+image: Visual Studio 2017
 install:
 - cmd: >-
     appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
