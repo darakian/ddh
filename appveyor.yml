@@ -17,3 +17,13 @@ after_test:
     cargo build --verbose
 
     cargo test
+artifacts:
+- path: target/release/ddh
+  name: ddh
+deploy:
+- provider: GitHub
+  description: DDH windows build
+  auth_token:
+    secure: WFr7LYW7Ios3cmmcG1YzM/etQ/xx1yGGlv37J3F9OhVcka5BdZCcTSdSo5MP08/k
+  draft: true
+  prerelease: false
