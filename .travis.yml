@@ -14,3 +14,4 @@ deploy:
   file: target/release/ddh
   on:
     repo: darakian/ddh
+    tags: true
