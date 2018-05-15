@@ -1,4 +1,6 @@
+# Linux Build Status
 [![Build Status](https://travis-ci.org/darakian/ddh.svg?branch=master)](https://travis-ci.org/darakian/ddh)
+# Windows Build Status
 [![Build status](https://ci.appveyor.com/api/projects/status/wv7tcfn0a7grjnv6?svg=true)](https://ci.appveyor.com/project/darakian/ddh)
 
 # The **D**irectory **D**ifferential **h**Tool
