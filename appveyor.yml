@@ -1,4 +1,14 @@
 version: 9.6.{build}
+environment:
+  global:
+    PROJECT_NAME: ddh
+  matrix:
+    # Stable channel
+    - TARGET: x86_64-pc-windows-gnu
+      CHANNEL: stable
+    - TARGET: x86_64-pc-windows-msvc
+      CHANNEL: stable
+
 install:
 - sh: >-
     appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
