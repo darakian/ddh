@@ -18,7 +18,7 @@ after_test:
 
     cargo test
 artifacts:
-- path: target/release/ddh
+- path: target\release\ddh
   name: ddh
 deploy:
 - provider: GitHub
