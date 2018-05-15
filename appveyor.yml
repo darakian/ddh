@@ -1,26 +1,19 @@
 version: 9.6.{build}
-environment:
-  global:
-    PROJECT_NAME: ddh
-  matrix:
-    # Stable channel
-    - TARGET: x86_64-pc-windows-gnu
-      CHANNEL: stable
-    - TARGET: x86_64-pc-windows-msvc
-      CHANNEL: stable
-
 install:
-    - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
-    - rustup-init.exe -y --default-host %TARGET%
-    - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-    - rustc -V
-    - cargo -V
+- cmd: >-
+    appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
 
+    rustup-init.exe -y --default-host %TARGET%
+
+    set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+
+    rustc -V
+
+    cargo -V
 build_script:
-- sh: cargo build --release
-
+- cmd: cargo build --release
 after_test:
-- sh: >-
+- cmd: >-
     cargo build --verbose
 
     cargo test
