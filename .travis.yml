@@ -1,12 +1,19 @@
 language: rust
+
+branches:
+  only:
+  - master
+  - release
+
 rust:
-- stable
+  - stable
 script:
-- cargo build --verbose --all
-- cargo test --verbose --all
-- cargo clean
-- cargo build --release --all
-- cargo test --verbose --all
+  - cargo build --verbose --all
+  - cargo test --verbose --all
+  - cargo clean
+  - cargo build --release --all
+  - cargo test --verbose --all
+
 deploy:
   provider: releases
   tag: linux64
