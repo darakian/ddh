@@ -23,7 +23,7 @@ artifacts:
   name: ddh
 deploy:
 - provider: GitHub
-  tag: win64
+  tag: win64-$(appveyor_build_version)
   description: DDH windows build
   auth_token:
     secure: WFr7LYW7Ios3cmmcG1YzM/etQ/xx1yGGlv37J3F9OhVcka5BdZCcTSdSo5MP08/k
