@@ -91,7 +91,9 @@ fn main() {
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 1};
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
-    let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().map(|x| fs::canonicalize(x).expect("Error canonicalizing input")).collect();
+    let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
+    //.map(|x| fs::canonicalize(x).expect("Error canonicalizing input"))
+    .collect();
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
