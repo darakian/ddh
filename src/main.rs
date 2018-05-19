@@ -189,7 +189,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
         });
     } else if current_path.is_file() && !(current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink()){
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error sending new fileinfo");
-    } else if !current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink(){
+    } else if !(current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink()){
         println!("Cannot open {:?}.\n Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));
     } else {}
 }
