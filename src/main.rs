@@ -88,7 +88,7 @@ fn main() {
                         .get_matches();
 
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Kilobytes"};
-    let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 1};
+    let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 2};
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
@@ -176,21 +176,19 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
         return
     }
 
-    if current_path.is_dir(){
+    if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_dir(){
         let mut paths: Vec<DirEntry> = Vec::new();
         match fs::read_dir(current_path) {
                 Ok(read_dir_results) => read_dir_results.filter(|x| x.is_ok()).for_each(|x| paths.push(x.unwrap())),
-                Err(e) => println!("Skipping. {:?}", e.kind()),
+                Err(e) => println!("Skipping {:?}. {:?}", current_path, e.kind()),
             }
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
             stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
                 traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
-    } else if current_path.is_file() && !(current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink()){
+    } else if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_file(){
         sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error sending new fileinfo");
-    } else if !(current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_symlink()){
-        println!("Cannot open {:?}.\n Skipping. Metadata: {:?}", current_path, current_path.metadata().expect("Error getting Metadata"));
     } else {}
 }
 
