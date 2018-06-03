@@ -1,10 +1,5 @@
 language: rust
 
-branches:
-  only:
-  - master
-  - release
-
 rust:
   - stable
 script:
