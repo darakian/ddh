@@ -6,6 +6,7 @@ use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
 use std::cmp::Ordering;
 use std::fs::{self, DirEntry};
+use std::io::prelude::*;
 
 //External imports
 extern crate clap;
@@ -144,6 +145,7 @@ fn main() {
     shared_files.par_iter().map(|x| x.file_len).sum::<u64>()/(display_divisor),
     blocksize,
     shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
+    write_results_to_file(&shared_files, &unique_files, out_file);
 
     match arguments.value_of("Print").unwrap_or(""){
         "single" => {println!("Single instance files"); unique_files.par_iter()
@@ -158,7 +160,7 @@ fn main() {
             shared_files.iter().for_each(|x| {
                 x.file_paths.par_iter().for_each(|y| println!(/*"{:x}, */"{}, {}", y.to_str().unwrap(), x.file_len));})
         },
-        _ => {}};
+        _ => {println!("Full results written to {}", out_file);}};
 }
 
 fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (){
@@ -236,4 +238,33 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         true
     }else{false});
     files
+}
+
+fn write_results_to_file(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, file: &str) {
+    let mut output = fs::File::create(file).expect("Error opening output file for writing");
+    output.write(b"Multiple instance files files:\n").expect("Error writing results");
+    for file in shared_files.into_iter(){
+        let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
+        output.write(title.as_bytes()).expect("Error writing results");
+        output.write(b"\n").expect("Error writing results");
+        for entry in file.file_paths.iter(){
+            output.write(b"\t").expect("Error writing results");
+            output.write(entry.as_path().to_str().unwrap().as_bytes()).expect("Error writing results");
+            output.write(b"\n").expect("Error writing results");
+
+        }
+    }
+
+    output.write(b"Single instance files files:\n").expect("Error writing results");
+    for file in unique_files.into_iter(){
+        let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
+        output.write(title.as_bytes()).expect("Error writing results");
+        output.write(b"\n").expect("Error writing results");
+        for entry in file.file_paths.iter(){
+            output.write(b"\t").expect("Error writing results");
+            output.write(entry.as_path().to_str().unwrap().as_bytes()).expect("Error writing results");
+            output.write(b"\n").expect("Error writing results");
+
+        }
+    }
 }
