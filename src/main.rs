@@ -94,6 +94,15 @@ fn main() {
 
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 2};
+    let out_file = arguments.value_of("Output").unwrap_or("Results.txt");
+    let out_file = out_file.rsplit("/").next().unwrap_or("Results.txt");
+    match fs::File::open(out_file) {
+        Ok(_f) => { //File exists.
+            println!("File {} already exists. Exiting.", out_file);
+            return
+        },
+        Err(_e) => {}, //File does not exist. Write away
+    }
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
