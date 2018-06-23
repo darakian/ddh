@@ -63,7 +63,6 @@ fn main() {
                         .arg(Arg::with_name("directories")
                                .short("d")
                                .long("directories")
-                               .case_insensitive(true)
                                .value_name("Directories")
                                .help("Directories to parse")
                                .min_values(1)
@@ -85,6 +84,12 @@ fn main() {
                                 .case_insensitive(true)
                                 .takes_value(true)
                                 .help("Print Single Instance or Shared Instance files."))
+                        .arg(Arg::with_name("Output")
+                                .short("o")
+                                .long("out")
+                                .takes_value(true)
+                                .max_values(1)
+                                .help("File to output to. Default is Results.txt"))
                         .get_matches();
 
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
@@ -92,7 +97,6 @@ fn main() {
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
-    //.map(|x| fs::canonicalize(x).expect("Error canonicalizing input"))
     .collect();
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
