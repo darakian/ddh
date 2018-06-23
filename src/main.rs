@@ -99,7 +99,7 @@ fn main() {
     let out_file = out_file.rsplit("/").next().unwrap_or("Results.txt");
     match fs::File::open(out_file) {
         Ok(_f) => { //File exists.
-            println!("File {} already exists. Exiting.", out_file);
+            println!("File {} already exists.\nPlease use a different output file. Exiting.", out_file);
             return
         },
         Err(_e) => {}, //File does not exist. Write away.
