@@ -102,7 +102,7 @@ fn main() {
             println!("File {} already exists. Exiting.", out_file);
             return
         },
-        Err(_e) => {}, //File does not exist. Write away
+        Err(_e) => {}, //File does not exist. Write away.
     }
     let display_divisor =  1024u64.pow(display_power);
     let (sender, receiver) = channel();
