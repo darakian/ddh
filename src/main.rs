@@ -58,7 +58,7 @@ impl Hash for Fileinfo{
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                        .version("0.9.6")
+                        .version("0.9.7")
                         .author("Jon Moroney jmoroney@hawaii.edu")
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
                         .arg(Arg::with_name("directories")
