@@ -19,7 +19,7 @@ DDH traverses input directories and their subdirectories, hashes files as needed
 
 ## Example
 ```
-Directory Difference hTool 0.9.4
+Directory Difference hTool 0.9.6
 Compare and contrast directories.
 Example invocation: ddh /home/jon/downloads /home/jon/documents -p shared
 
@@ -32,8 +32,10 @@ FLAGS:
 
 OPTIONS:
     -b, --blocksize <Blocksize>    Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is
-                                   Kilobytes. [values: B, K, M, G]
-    -p, --print <Print>            Print Single Instance or Shared Instance files. [values: single, shared, csv]
+                                   Kilobytes. [possible values: B, K, M, G]
+    -o, --out <Output>             File to output to. Default is Results.txt
+    -p, --print <Print>            Print Single Instance or Shared Instance files. [possible values: single, shared,
+                                   csv]
 
 ARGS:
     <Directories>...    Directories to parse
