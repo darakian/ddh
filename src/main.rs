@@ -108,13 +108,15 @@ fn main() {
     let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
     .collect();
+
+    //Search over user supplied directories
     search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
         });
     });
-
-    drop(sender);
+    drop(sender); //Drop sender so that reciever closes when all thread closures end
+    //Collect Fileinfo entries in a HashMap of vectors. Each vector corrosponds to a specific flie length
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
     match files_of_lengths.entry(entry.file_len) {
@@ -123,9 +125,11 @@ fn main() {
         }
     }
 
-    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter().map(|x|
+    //Compare them files
+    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter().map(|x| //For each vector diff and compare on x.0 (length) and x.1 the vector
         differentiate_and_consolidate(x.0, x.1)
     ).flatten().collect();
+    //Get duplicates and singletons
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
 
     //Print main output
@@ -147,6 +151,7 @@ fn main() {
     shared_files.par_iter().map(|x| x.file_paths.len() as u64).sum::<u64>());
     write_results_to_file(&shared_files, &unique_files, out_file);
 
+    //Print aux output
     match arguments.value_of("Print").unwrap_or(""){
         "single" => {println!("Single instance files"); unique_files.par_iter()
         .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()))},
