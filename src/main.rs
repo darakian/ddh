@@ -15,7 +15,7 @@ use clap::{Arg, App};
 use rayon::prelude::*;
 
 mod lib;
-use lib::Fileinfo;
+use lib::Fileinfo; //Struct used to store most information about the file
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
