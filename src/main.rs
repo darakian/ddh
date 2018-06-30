@@ -125,11 +125,11 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
-                    a.mark_rehash=true;
-                    b.mark_rehash=true;
+                    a.second_hash=true;
+                    b.second_hash=true;
                     false
                 }else{false});
-                files.par_iter_mut().filter(|x| x.mark_rehash==true).for_each(|file_ref| {
+                files.par_iter_mut().filter(|x| x.second_hash==true).for_each(|file_ref| {
                     hash_and_update(file_ref, 4096, false); //Skip 4KB
                 });
             }

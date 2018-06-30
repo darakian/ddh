@@ -27,14 +27,14 @@ pub struct Fileinfo{
     pub file_hash: u64,
     pub file_len: u64,
     pub file_paths: Vec<PathBuf>,
-    pub mark_rehash: bool,
+    pub second_hash: bool,
 }
 
 impl Fileinfo{
     pub fn new(hash: u64, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
-        Fileinfo{file_hash: hash, file_len: length, file_paths: set, mark_rehash: false}
+        Fileinfo{file_hash: hash, file_len: length, file_paths: set, second_hash: false}
     }
 }
 
