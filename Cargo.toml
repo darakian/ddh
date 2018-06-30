@@ -1,12 +1,15 @@
 [package]
 name = "ddh"
-version = "0.9.7"
+version = "0.9.8"
 authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 
 [dependencies]
 clap = "2.30.0"
 rayon = "1.0"
 stacker = "0.1"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
 
 [profile.release]
 lto = true

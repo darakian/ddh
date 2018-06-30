@@ -1,9 +1,28 @@
+#[macro_use]
+extern crate serde_derive;
+
 //Std imports
 use std::hash::{Hash, Hasher};
 use std::path::{PathBuf};
 use std::cmp::Ordering;
 
-#[derive(Debug)]
+extern crate serde;
+extern crate serde_json;
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum PrintFmt{
+    Standard,
+    Json,
+}
+
+pub enum Verbosity{
+    Quiet,
+    Duplicates,
+    All
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
     pub file_hash: u64,
     pub file_len: u64,
