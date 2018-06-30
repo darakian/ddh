@@ -5,8 +5,8 @@ use std::cmp::Ordering;
 
 #[derive(Debug)]
 pub struct Fileinfo{
-    pub file_hash: u64,
-    pub file_len: u64,
+    file_hash: u64,
+    file_len: u64,
     pub file_paths: Vec<PathBuf>,
     pub mark_rehash: bool,
 }
@@ -16,6 +16,19 @@ impl Fileinfo{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
         Fileinfo{file_hash: hash, file_len: length, file_paths: set, mark_rehash: false}
+    }
+
+    pub fn len(&self) -> u64{
+        self.file_len
+    }
+
+    pub fn set_hash(&mut self, value: u64) -> u64{
+        self.file_hash = value;
+        self.file_hash
+    }
+
+    pub fn get_hash(&self) -> u64{
+        self.file_hash
     }
 }
 
