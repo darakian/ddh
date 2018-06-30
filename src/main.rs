@@ -1,10 +1,9 @@
 //Std imports
 use std::io::{Read, Seek, SeekFrom, BufReader};
-use std::hash::{Hash, Hasher};
-use std::path::{Path, PathBuf};
+use std::hash::{Hasher};
+use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
-use std::cmp::Ordering;
 use std::fs::{self, DirEntry};
 use std::io::prelude::*;
 
@@ -15,46 +14,8 @@ extern crate stacker;
 use clap::{Arg, App};
 use rayon::prelude::*;
 
-#[derive(Debug)]
-struct Fileinfo{
-    file_hash: u64,
-    file_len: u64,
-    file_paths: Vec<PathBuf>,
-    mark_rehash: bool,
-}
-
-impl Fileinfo{
-    fn new(hash: u64, length: u64, path: PathBuf) -> Self{
-        let mut set = Vec::<PathBuf>::new();
-        set.push(path);
-        Fileinfo{file_hash: hash, file_len: length, file_paths: set, mark_rehash: false}
-    }
-}
-
-impl PartialEq for Fileinfo{
-    fn eq(&self, other: &Fileinfo) -> bool {
-        (self.file_hash==other.file_hash)&&(self.file_len==other.file_len)
-    }
-}
-impl Eq for Fileinfo{}
-
-impl PartialOrd for Fileinfo{
-    fn partial_cmp(&self, other: &Fileinfo) -> Option<Ordering>{
-        self.file_len.partial_cmp(&other.file_len)
-    }
-}
-
-impl Ord for Fileinfo{
-    fn cmp(&self, other: &Fileinfo) -> Ordering {
-        self.file_len.cmp(&other.file_len)
-    }
-}
-
-impl Hash for Fileinfo{
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.file_hash.hash(state);
-    }
-}
+mod lib;
+use lib::Fileinfo;
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
