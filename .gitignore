@@ -1,2 +1,3 @@
 *.lock
 target/
+Results.txt
