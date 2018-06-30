@@ -250,11 +250,11 @@ fn write_results_to_file(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&File
     output.write(b"Multiple instance files files:\n").expect("Error writing results");
     for file in shared_files.into_iter(){
         let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
-        output.write_fmt(format_args!("{}", title)).unwrap();
+        output.write_fmt(format_args!("{}\n", title)).unwrap();
         //output.write(b"\n").expect("Error writing results");
         for entry in file.file_paths.iter(){
             //output.write(b"\t").expect("Error writing results");
-            output.write_fmt(format_args!("\t{}", entry.as_path().to_str().unwrap())).unwrap();
+            output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
             //output.write(entry.as_path().to_str().unwrap().as_bytes()).expect("Error writing results");
             //output.write(b"\n").expect("Error writing results");
 
@@ -264,12 +264,12 @@ fn write_results_to_file(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&File
     output.write(b"Single instance files files:\n").expect("Error writing results");
     for file in unique_files.into_iter(){
         let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
-        output.write_fmt(format_args!("{}", title)).unwrap();
+        output.write_fmt(format_args!("{}\n", title)).unwrap();
         //output.write(title.as_bytes()).expect("Error writing results");
         //output.write(b"\n").expect("Error writing results");
         for entry in file.file_paths.iter(){
             //output.write(b"\t").expect("Error writing results");
-            output.write_fmt(format_args!("\t{}", entry.as_path().to_str().unwrap())).unwrap();
+            output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
             //output.write(entry.as_path().to_str().unwrap().as_bytes()).expect("Error writing results");
             //output.write(b"\n").expect("Error writing results");
 
