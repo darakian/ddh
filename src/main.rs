@@ -268,7 +268,10 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
             match stdin().read_line(&mut input) {
                 Ok(_n) => {
                     if input.starts_with("N") || input.starts_with("n"){
+                        println!("Exiting.");
                         return;
+                    } else {
+                        println!("Over writing {}", out_file);
                     }
                 }
                 Err(_e) => {/*Error reading user input*/},
