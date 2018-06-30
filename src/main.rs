@@ -90,29 +90,6 @@ fn main() {
     process_full_output(&shared_files, &unique_files, &complete_files, &arguments);
 }
 
-fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (){
-    assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
-    let mut hasher = DefaultHasher::new();
-    match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
-        Ok(f) => {
-            let mut buffer_reader = BufReader::new(f);
-            buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
-            let mut hash_buffer = [0;4096];
-            loop {
-                match buffer_reader.read(&mut hash_buffer) {
-                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
-                    Ok(n) if n==0 => break,
-                    Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
-                    _ => println!("Should not be here"),
-                    }
-                if pre_hash{break}
-            }
-            input.file_hash=hasher.finish();
-        }
-        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
-    }
-}
-
 fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if !current_path.exists(){
         return
@@ -167,9 +144,31 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     files
 }
 
+fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (){
+    assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
+    let mut hasher = DefaultHasher::new();
+    match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
+        Ok(f) => {
+            let mut buffer_reader = BufReader::new(f);
+            buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
+            let mut hash_buffer = [0;4096];
+            loop {
+                match buffer_reader.read(&mut hash_buffer) {
+                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
+                    Ok(n) if n==0 => break,
+                    Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
+                    _ => println!("Should not be here"),
+                    }
+                if pre_hash{break}
+            }
+            input.file_hash=hasher.finish();
+        }
+        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
+    }
+}
+
 fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, file: &str) {
     let mut output = fs::File::create(file).expect("Error opening output file for writing");
-
     match fmt {
         PrintFmt::Standard => {
             output.write_fmt(format_args!("Duplicates:\n")).unwrap();
@@ -193,8 +192,6 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
             output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
         },
     }
-
-
 }
 
 fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){
@@ -264,6 +261,7 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     let out_file = out_file.rsplit("/").next().unwrap_or("Results.txt");
     match fs::File::open(out_file) {
             Ok(_f) => { //File exists.
+            println!("---");
             println!("File {} already exists.", out_file);
             println!("Overwrite? Y/N");
             let mut input = String::new();
