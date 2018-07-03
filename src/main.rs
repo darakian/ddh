@@ -76,7 +76,7 @@ fn main() {
     //Collect Fileinfo entries in a HashMap of vectors. Each vector corrosponds to a specific flie length
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
-    match files_of_lengths.entry(entry.file_len) {
+    match files_of_lengths.entry(entry.get_length()) {
         Entry::Vacant(e) => { e.insert(vec![entry]); },
         Entry::Occupied(mut e) => { e.get_mut().push(entry); }
         }
@@ -216,19 +216,19 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     .map(|x| x.file_paths.len() as u64)
     .sum::<u64>(),
     complete_files.par_iter()
-    .map(|x| (x.file_paths.len() as u64)*x.file_len)
+    .map(|x| (x.file_paths.len() as u64)*x.get_length())
     .sum::<u64>()/(display_divisor),
     blocksize);
     println!("{} Total files (without duplicates): {} {}", complete_files.len(), complete_files.par_iter()
-    .map(|x| x.file_len)
+    .map(|x| x.get_length())
     .sum::<u64>()/(display_divisor),
     blocksize);
     println!("{} Single instance files: {} {}",unique_files.len(), unique_files.par_iter()
-    .map(|x| x.file_len)
+    .map(|x| x.get_length())
     .sum::<u64>()/(display_divisor),
     blocksize);
     println!("{} Shared instance files: {} {} ({} instances)", shared_files.len(), shared_files.par_iter()
-    .map(|x| x.file_len)
+    .map(|x| x.get_length())
     .sum::<u64>()/(display_divisor),
     blocksize, shared_files.par_iter()
     .map(|x| x.file_paths.len() as u64)
@@ -239,14 +239,14 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         (_, Verbosity::Quiet) => {},
         (PrintFmt::Standard, Verbosity::Duplicates) => {
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
+            println!("instances of {:x} with file length {}:", x.file_hash, x.get_length());
             x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Standard, Verbosity::All) => {
             println!("Single instance files"); unique_files.par_iter()
             .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.file_hash, x.file_len);
+            println!("instances of {:x} with file length {}:", x.file_hash, x.get_length());
             x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Json, Verbosity::Duplicates) => {
