@@ -14,12 +14,13 @@ extern crate serde_json;
 pub enum PrintFmt{
     Standard,
     Json,
+    Off,
 }
 
 pub enum Verbosity{
     Quiet,
     Duplicates,
-    All
+    All,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

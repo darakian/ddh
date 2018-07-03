@@ -4,7 +4,7 @@ use std::hash::{Hasher};
 use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
-use std::fs::{self, DirEntry, File};
+use std::fs::{self, DirEntry};
 use std::io::prelude::*;
 
 //External imports
@@ -56,7 +56,7 @@ fn main() {
                         .arg(Arg::with_name("Format")
                                 .short("f")
                                 .long("format")
-                                .possible_values(&["standard", "json"])
+                                .possible_values(&["standard", "json", "off"])
                                 .takes_value(true)
                                 .max_values(1)
                                 .help("Sets output format."))
@@ -139,7 +139,6 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
-        //drop(a);
         true
     }else{false});
     files
@@ -192,6 +191,7 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
         PrintFmt::Json => {
             output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
         },
+        PrintFmt::Off =>{return},
     }
     println!("{:#?} results written to {}", fmt, file);
 }
@@ -255,32 +255,38 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         (PrintFmt::Json, Verbosity::All) => {
             println!("{}", serde_json::to_string(complete_files).unwrap_or("".to_string()));
         },
-        //_ => {},
+        _ => {},
     }
 
     //Check if output file is defined. If it exists ask for overwrite.
-    let out_file = arguments.value_of("Output").unwrap_or("Results.txt");
-    let out_file = out_file.rsplit("/").next().unwrap_or("Results.txt");
-    match fs::File::open(out_file) {
-            Ok(_f) => { //File exists.
-            println!("---");
-            println!("File {} already exists.", out_file);
-            println!("Overwrite? Y/N");
-            let mut input = String::new();
-            match stdin().read_line(&mut input) {
-                Ok(_n) => {
-                    if input.starts_with("N") || input.starts_with("n"){
-                        println!("Exiting.");
-                        return;
-                    } else {
-                        println!("Over writing {}", out_file);
+    //let mut out_file = "";
+    match arguments.value_of("Output"){
+        Some("no") => {},
+        Some(_string) => {
+            let out_file = _string.rsplit("/").next().unwrap_or("Results.txt");
+            match fs::File::open(out_file) {
+                    Ok(_f) => { //File exists.
+                    println!("---");
+                    println!("File {} already exists.", out_file);
+                    println!("Overwrite? Y/N");
+                    let mut input = String::new();
+                    match stdin().read_line(&mut input) {
+                        Ok(_n) => {
+                            if input.starts_with("N") || input.starts_with("n"){
+                                println!("Exiting.");
+                                return;
+                            } else {
+                                println!("Over writing {}", out_file);
+                            }
+                        }
+                        Err(_e) => {/*Error reading user input*/},
                     }
-                }
-                Err(_e) => {/*Error reading user input*/},
+                },
+                Err(_e) => {}, //File does not exist. Write away.
             }
+            write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, out_file);
         },
-        Err(_e) => {}, //File does not exist. Write away.
+        None => {}
     }
-    write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, out_file);
-
+    //let out_file = out_file.rsplit("/").next().unwrap_or("Results.txt");
 }

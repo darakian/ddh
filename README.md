@@ -17,11 +17,15 @@ DDH traverses input directories and their subdirectories, hashes files as needed
 * ``` cargo build --release ```
 * the ddh binary will then be at target/release/ddh
 
+## Features
+DDH supports outputting to human readable `standard` output and to machine parsable `json`.
+
 ## Example
 ```
 Directory Difference hTool 0.9.8
 Compare and contrast directories.
-Example invocation: ddh /home/jon/downloads /home/jon/documents -p shared
+Example invocation: ddh ~/Downloads/ -o MyFiles.txt -f standard
+Example pipe ./target/release/ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin
 
 USAGE:
     ddh [OPTIONS] <Directories>...
