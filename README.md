@@ -25,7 +25,7 @@ DDH supports outputting to human readable `standard` output and to machine parsa
 Directory Difference hTool 0.9.8
 Compare and contrast directories.
 Example invocation: ddh ~/Downloads/ -o MyFiles.txt -f standard
-Example pipe ./target/release/ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin
+Example pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin
 
 USAGE:
     ddh [OPTIONS] <Directories>...
