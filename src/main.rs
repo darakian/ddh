@@ -4,7 +4,7 @@ use std::hash::{Hasher};
 use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
-use std::fs::{self, DirEntry};
+use std::fs::{self, DirEntry, File};
 use std::io::prelude::*;
 
 //External imports
@@ -51,6 +51,7 @@ fn main() {
                                 .short("o")
                                 .long("output")
                                 .takes_value(true)
+                                .max_values(1)
                                 .help("Sets file to save all output."))
                         .arg(Arg::with_name("Format")
                                 .short("f")
@@ -192,6 +193,7 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
             output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
         },
     }
+    println!("{:#?} results written to {}", fmt, file);
 }
 
 fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){
