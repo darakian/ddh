@@ -25,7 +25,7 @@ pub enum Verbosity{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
-    pub file_hash: u64,
+    file_hash: u64,
     file_length: u64,
     pub file_paths: Vec<PathBuf>,
     pub second_hash: bool,
@@ -37,13 +37,14 @@ impl Fileinfo{
         set.push(path);
         Fileinfo{file_hash: hash, file_length: length, file_paths: set, second_hash: false}
     }
-
     pub fn get_length(&self) -> u64{
         self.file_length
     }
-
-    pub fn get_hash() -> u64{
+    pub fn get_hash(&self) -> u64{
         self.file_hash
+    }
+    pub fn set_hash(&mut self, hash: u64) -> (){
+        self.file_hash = hash
     }
 }
 

@@ -123,7 +123,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             files.par_iter_mut().for_each(|file_ref| {
                 hash_and_update(file_ref, 0, true);
             });
-            files.par_sort_unstable_by(|a, b| b.file_hash.cmp(&a.file_hash)); //O(nlog(n))
+            files.par_sort_unstable_by(|a, b| b.get_hash().cmp(&a.get_hash())); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
                     a.second_hash=true;
@@ -161,7 +161,7 @@ fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (
                     }
                 if pre_hash{break}
             }
-            input.file_hash=hasher.finish();
+            input.set_hash(hasher.finish());
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
@@ -239,15 +239,15 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         (_, Verbosity::Quiet) => {},
         (PrintFmt::Standard, Verbosity::Duplicates) => {
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.file_hash, x.get_length());
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap()));})
+            println!("instances of {:x} with file length {}:", x.get_hash(), x.get_length());
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.get_hash(), y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Standard, Verbosity::All) => {
             println!("Single instance files"); unique_files.par_iter()
             .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.file_hash, x.get_length());
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.file_hash, y.canonicalize().unwrap().to_str().unwrap()));})
+            println!("instances of {:x} with file length {}:", x.get_hash(), x.get_length());
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.get_hash(), y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Json, Verbosity::Duplicates) => {
             println!("{}", serde_json::to_string(shared_files).unwrap_or("".to_string()));
@@ -288,5 +288,4 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         },
         None => {}
     }
-    //let out_file = out_file.rsplit("/").next().unwrap_or("Results.txt");
 }
