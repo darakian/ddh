@@ -52,7 +52,7 @@ fn main() {
                                 .long("output")
                                 .takes_value(true)
                                 .max_values(1)
-                                .help("Sets file to save all output."))
+                                .help("Sets file to save all output. Use 'no' for no file output."))
                         .arg(Arg::with_name("Format")
                                 .short("f")
                                 .long("format")
