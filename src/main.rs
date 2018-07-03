@@ -1,5 +1,5 @@
 //Std imports
-use std::io::{Read, Seek, SeekFrom, BufReader, stdin};
+use std::io::{Read, BufReader, stdin};
 use std::hash::{Hasher};
 use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
@@ -121,7 +121,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         n if n>1 => {
             //Hash stage one
             files.par_iter_mut().for_each(|file_ref| {
-                hash_and_update(file_ref, 0, true);
+                hash_and_update(file_ref, true);
             });
             files.par_sort_unstable_by(|a, b| b.get_hash().cmp(&a.get_hash())); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
@@ -131,7 +131,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     false
                 }else{false});
                 files.par_iter_mut().filter(|x| x.second_hash==true).for_each(|file_ref| {
-                    hash_and_update(file_ref, 4096, false); //Skip 4KB
+                    hash_and_update(file_ref, false); //Skip 4KB
                 });
             }
         },
@@ -144,13 +144,12 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     files
 }
 
-fn hash_and_update(input: &mut Fileinfo, skip_n_bytes: u64, pre_hash: bool) -> (){
+fn hash_and_update(input: &mut Fileinfo, pre_hash: bool) -> (){
     assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
         Ok(f) => {
             let mut buffer_reader = BufReader::new(f);
-            buffer_reader.seek(SeekFrom::Start(skip_n_bytes)).expect("Error skipping bytes in second hash round");
             let mut hash_buffer = [0;4096];
             loop {
                 match buffer_reader.read(&mut hash_buffer) {
