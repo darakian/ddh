@@ -3,7 +3,10 @@ extern crate serde_derive;
 
 //Std imports
 use std::hash::{Hash, Hasher};
-use std::path::{PathBuf};
+use std::collections::hash_map::DefaultHasher;
+use std::fs::{self};
+use std::io::{Read, BufReader};
+use std::path::PathBuf;
 use std::cmp::Ordering;
 
 extern crate serde;
@@ -25,32 +28,55 @@ pub enum Verbosity{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
-    file_hash: u64,
+    full_hash: u64,
+    partial_hash: u64,
     file_length: u64,
     pub file_paths: Vec<PathBuf>,
     pub second_hash: bool,
 }
 
 impl Fileinfo{
-    pub fn new(hash: u64, length: u64, path: PathBuf) -> Self{
+    pub fn new(hash: u64, partial_hash: u64, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
-        Fileinfo{file_hash: hash, file_length: length, file_paths: set, second_hash: false}
+        Fileinfo{full_hash: hash, partial_hash: partial_hash, file_length: length, file_paths: set, second_hash: false}
     }
     pub fn get_length(&self) -> u64{
         self.file_length
     }
-    pub fn get_hash(&self) -> u64{
-        self.file_hash
+    pub fn get_full_hash(&self) -> u64{
+        self.full_hash
     }
-    pub fn set_hash(&mut self, hash: u64) -> (){
-        self.file_hash = hash
+    pub fn set_full_hash(&mut self, hash: u64) -> (){
+        self.full_hash = hash
+    }
+    pub fn get_partial_hash(&self) -> u64{
+        self.full_hash
+    }
+
+    pub fn generate_partial_hash(&mut self) -> Option<u64>{
+        let mut hasher = DefaultHasher::new();
+        match fs::File::open(self.file_paths.iter().next().expect("Error reading path")) {
+            Ok(f) => {
+                let mut buffer_reader = BufReader::new(f);
+                let mut hash_buffer = [0;4096];
+                match buffer_reader.read(&mut hash_buffer) {
+                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
+                    Ok(n) if n==0 => return None,
+                    Err(_e) => return None,
+                    _ => return None,
+                    }
+                self.partial_hash = hasher.finish();
+            }
+            Err(_e) => return None,
+        }
+        return Some(self.partial_hash)
     }
 }
 
 impl PartialEq for Fileinfo{
     fn eq(&self, other: &Fileinfo) -> bool {
-        (self.file_hash==other.file_hash)&&(self.file_length==other.file_length)
+        (self.partial_hash==other.partial_hash)&&(self.full_hash==other.full_hash)&&(self.file_length==other.file_length)
     }
 }
 impl Eq for Fileinfo{}
@@ -69,6 +95,6 @@ impl Ord for Fileinfo{
 
 impl Hash for Fileinfo{
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.file_hash.hash(state);
+        self.full_hash.hash(state);
     }
 }

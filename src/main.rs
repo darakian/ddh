@@ -108,7 +108,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
             });
         });
     } else if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_file(){
-        sender.send(Fileinfo::new(0, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error sending new fileinfo");
+        sender.send(Fileinfo::new(0, 0, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error sending new fileinfo");
     } else {}
 }
 
@@ -121,9 +121,10 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         n if n>1 => {
             //Hash stage one
             files.par_iter_mut().for_each(|file_ref| {
-                hash_and_update(file_ref, true);
+                let p_hash = file_ref.generate_partial_hash().unwrap();
+                file_ref.set_full_hash(p_hash);
             });
-            files.par_sort_unstable_by(|a, b| b.get_hash().cmp(&a.get_hash())); //O(nlog(n))
+            files.par_sort_unstable_by(|a, b| b.get_full_hash().cmp(&a.get_full_hash())); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
                     a.second_hash=true;
@@ -131,7 +132,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     false
                 }else{false});
                 files.par_iter_mut().filter(|x| x.second_hash==true).for_each(|file_ref| {
-                    hash_and_update(file_ref, false); //Skip 4KB
+                    hash_and_update(file_ref); //Skip 4KB
                 });
             }
         },
@@ -144,7 +145,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     files
 }
 
-fn hash_and_update(input: &mut Fileinfo, pre_hash: bool) -> (){
+fn hash_and_update(input: &mut Fileinfo) -> (){
     assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
     let mut hasher = DefaultHasher::new();
     match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
@@ -158,9 +159,8 @@ fn hash_and_update(input: &mut Fileinfo, pre_hash: bool) -> (){
                     Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
                     _ => println!("Should not be here"),
                     }
-                if pre_hash{break}
             }
-            input.set_hash(hasher.finish());
+            input.set_full_hash(hasher.finish());
         }
         Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
     }
@@ -238,15 +238,15 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         (_, Verbosity::Quiet) => {},
         (PrintFmt::Standard, Verbosity::Duplicates) => {
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.get_hash(), x.get_length());
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.get_hash(), y.canonicalize().unwrap().to_str().unwrap()));})
+            println!("instances of {:x} with file length {}:", x.get_full_hash(), x.get_length());
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.get_full_hash(), y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Standard, Verbosity::All) => {
             println!("Single instance files"); unique_files.par_iter()
             .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {:x} with file length {}:", x.get_hash(), x.get_length());
-            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.get_hash(), y.canonicalize().unwrap().to_str().unwrap()));})
+            println!("instances of {:x} with file length {}:", x.get_full_hash(), x.get_length());
+            x.file_paths.par_iter().for_each(|y| println!("{:x}, {}", x.get_full_hash(), y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Json, Verbosity::Duplicates) => {
             println!("{}", serde_json::to_string(shared_files).unwrap_or("".to_string()));
