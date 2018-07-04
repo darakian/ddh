@@ -121,17 +121,16 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         n if n>1 => {
             //Hash stage one
             files.par_iter_mut().for_each(|file_ref| {
-                let p_hash = file_ref.generate_partial_hash().unwrap();
-                file_ref.set_full_hash(p_hash);
+                file_ref.generate_partial_hash().unwrap();
             });
-            files.par_sort_unstable_by(|a, b| b.get_full_hash().cmp(&a.get_full_hash())); //O(nlog(n))
+            files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash())); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
-                    a.second_hash=true;
-                    b.second_hash=true;
+                    a.set_full_hash(1);
+                    b.set_full_hash(1);
                     false
                 }else{false});
-                files.par_iter_mut().filter(|x| x.second_hash==true).for_each(|file_ref| {
+                files.par_iter_mut().filter(|x| x.get_full_hash()==1).for_each(|file_ref| {
                     hash_and_update(file_ref); //Skip 4KB
                 });
             }
