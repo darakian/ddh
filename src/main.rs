@@ -165,35 +165,6 @@ fn hash_and_update(input: &mut Fileinfo) -> (){
     }
 }
 
-fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, file: &str) {
-    let mut output = fs::File::create(file).expect("Error opening output file for writing");
-    match fmt {
-        PrintFmt::Standard => {
-            output.write_fmt(format_args!("Duplicates:\n")).unwrap();
-            for file in shared_files.into_iter(){
-                let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
-                output.write_fmt(format_args!("{}\n", title)).unwrap();
-                for entry in file.file_paths.iter(){
-                    output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
-                }
-            }
-            output.write_fmt(format_args!("Singletons:\n")).unwrap();
-            for file in unique_files.into_iter(){
-                let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
-                output.write_fmt(format_args!("{}\n", title)).unwrap();
-                for entry in file.file_paths.iter(){
-                    output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
-                }
-            }
-        },
-        PrintFmt::Json => {
-            output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
-        },
-        PrintFmt::Off =>{return},
-    }
-    println!("{:#?} results written to {}", fmt, file);
-}
-
 fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){
     //Get constants
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
@@ -257,9 +228,9 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     }
 
     //Check if output file is defined. If it exists ask for overwrite.
-    match arguments.value_of("Output"){
-        Some("no") => {},
-        Some(_string) => {
+    match arguments.value_of("Output").unwrap_or("Results.txt"){
+        "no" => {},
+        _string => {
             let out_file = _string.rsplit("/").next().unwrap_or("Results.txt");
             match fs::File::open(out_file) {
                     Ok(_f) => { //File exists.
@@ -270,15 +241,9 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                     match stdin().read_line(&mut input) {
                         Ok(_n) => {
                             match input.chars().next().unwrap_or(' ') {
-                                'n' | 'N' => {
-                                    println!("Exiting.");
-                                    return;}
-                                'y' | 'Y' => {
-                                    println!("Over writing {}", out_file);
-                                }
-                                _ => {
-                                    println!("Exiting.");
-                                    return;}
+                                'n' | 'N' => {println!("Exiting."); return;}
+                                'y' | 'Y' => {println!("Over writing {}", out_file);}
+                                _ => {println!("Exiting."); return;}
                             }
                         }
                         Err(_e) => {/*Error reading user input*/},
@@ -288,6 +253,34 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
             }
             write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, out_file);
         },
-        None => {}
     }
+}
+
+fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, file: &str) {
+    let mut output = fs::File::create(file).expect("Error opening output file for writing");
+    match fmt {
+        PrintFmt::Standard => {
+            output.write_fmt(format_args!("Duplicates:\n")).unwrap();
+            for file in shared_files.into_iter(){
+                let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
+                output.write_fmt(format_args!("{}\n", title)).unwrap();
+                for entry in file.file_paths.iter(){
+                    output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
+                }
+            }
+            output.write_fmt(format_args!("Singletons:\n")).unwrap();
+            for file in unique_files.into_iter(){
+                let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
+                output.write_fmt(format_args!("{}\n", title)).unwrap();
+                for entry in file.file_paths.iter(){
+                    output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
+                }
+            }
+        },
+        PrintFmt::Json => {
+            output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
+        },
+        PrintFmt::Off =>{return},
+    }
+    println!("{:#?} results written to {}", fmt, file);
 }
