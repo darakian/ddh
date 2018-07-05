@@ -257,7 +257,6 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     }
 
     //Check if output file is defined. If it exists ask for overwrite.
-    //let mut out_file = "";
     match arguments.value_of("Output"){
         Some("no") => {},
         Some(_string) => {
@@ -270,11 +269,16 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                     let mut input = String::new();
                     match stdin().read_line(&mut input) {
                         Ok(_n) => {
-                            if input.starts_with("N") || input.starts_with("n"){
-                                println!("Exiting.");
-                                return;
-                            } else {
-                                println!("Over writing {}", out_file);
+                            match input.chars().next().unwrap_or(' ') {
+                                'n' | 'N' => {
+                                    println!("Exiting.");
+                                    return;}
+                                'y' | 'Y' => {
+                                    println!("Over writing {}", out_file);
+                                }
+                                _ => {
+                                    println!("Exiting.");
+                                    return;}
                             }
                         }
                         Err(_e) => {/*Error reading user input*/},
