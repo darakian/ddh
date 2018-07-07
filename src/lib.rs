@@ -53,7 +53,7 @@ impl Fileinfo{
         self.full_hash
     }
     pub fn get_file_name(&self) -> &str{
-        self.file_paths.iter().next().unwrap().to_str().unwrap()
+        self.file_paths.iter().next().unwrap().to_str().unwrap().rsplit("/").next().unwrap()
     }
 
     pub fn generate_partial_hash(&mut self) -> Option<u64>{
