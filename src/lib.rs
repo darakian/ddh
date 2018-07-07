@@ -52,7 +52,7 @@ impl Fileinfo{
     pub fn get_partial_hash(&self) -> Option<u64>{
         self.full_hash
     }
-    pub fn get_file_name(&self) -> &str{
+    pub fn get_file_name(&self) -> &str{ //Gets the first file name. More useful than a hash value as an identifier.
         self.file_paths.iter().next().unwrap().to_str().unwrap().rsplit("/").next().unwrap()
     }
 
