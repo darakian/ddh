@@ -28,14 +28,14 @@ pub enum Verbosity{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
-    full_hash: u64,
-    partial_hash: u64,
+    full_hash: Option<u64>,
+    partial_hash: Option<u64>,
     file_length: u64,
     pub file_paths: Vec<PathBuf>,
 }
 
 impl Fileinfo{
-    pub fn new(hash: u64, partial_hash: u64, length: u64, path: PathBuf) -> Self{
+    pub fn new(hash: Option<u64>, partial_hash: Option<u64>, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
         Fileinfo{full_hash: hash, partial_hash: partial_hash, file_length: length, file_paths: set}
@@ -43,14 +43,17 @@ impl Fileinfo{
     pub fn get_length(&self) -> u64{
         self.file_length
     }
-    pub fn get_full_hash(&self) -> u64{
+    pub fn get_full_hash(&self) -> Option<u64>{
         self.full_hash
     }
     pub fn set_full_hash(&mut self, hash: u64) -> (){
-        self.full_hash = hash
+        self.full_hash = Some(hash)
     }
-    pub fn get_partial_hash(&self) -> u64{
+    pub fn get_partial_hash(&self) -> Option<u64>{
         self.full_hash
+    }
+    pub fn get_file_name(&self) -> &str{
+        self.file_paths.iter().next().unwrap().to_str().unwrap()
     }
 
     pub fn generate_partial_hash(&mut self) -> Option<u64>{
@@ -65,17 +68,17 @@ impl Fileinfo{
                     Err(_e) => return None,
                     _ => return None,
                     }
-                self.partial_hash = hasher.finish();
+                self.partial_hash = Some(hasher.finish());
             }
             Err(_e) => return None,
         }
-        return Some(self.partial_hash)
+        return Some(self.partial_hash.unwrap())
     }
 }
 
 impl PartialEq for Fileinfo{
     fn eq(&self, other: &Fileinfo) -> bool {
-        (self.partial_hash==other.partial_hash)&&(self.full_hash==other.full_hash)&&(self.file_length==other.file_length)
+        (self.file_length==other.file_length)&&(self.partial_hash==other.partial_hash)&&(self.full_hash==other.full_hash)
     }
 }
 impl Eq for Fileinfo{}
