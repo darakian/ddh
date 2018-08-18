@@ -8,7 +8,7 @@ The H is silent. This tool is called DDH for two very good reasons
 * DDT is a dangerous pesticide
 * I mistyped when I created the project
 
-DDH traverses input directories and their subdirectories, hashes files as needed and reports findings.
+DDH traverses input directories and their subdirectories. It also hashes files as needed and reports findings.
 
 ## Install
 * Install [Rust](https://www.rust-lang.org/en-US/install.html)
@@ -18,7 +18,7 @@ DDH traverses input directories and their subdirectories, hashes files as needed
 * the ddh binary will then be at target/release/ddh
 
 ## Features
-DDH supports outputting to human readable `standard` output and to machine parsable `json`.
+DDH supports both `standard` output for human comprehension and parsable `json` output for machines.
 
 ## Example
 ```
@@ -45,4 +45,4 @@ ARGS:
     <Directories>...    Directories to parse
 ```
 ## How
-DDH works by hashing files to determine uniqueness and as such depends heavily on disk speeds for performance.
+DDH works by hashing files to determine their uniqueness and, as such, depends heavily on disk speeds for performance.
