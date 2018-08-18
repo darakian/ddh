@@ -17,7 +17,7 @@ This tool is called DDH for two very good reasons.
 * ``` git clone https://github.com/darakian/ddh.git ddh ```
 * ``` cd ddh ```
 * ``` cargo build --release ```
-* the ddh binary will then be at target/release/ddh
+* The DDH binary will then be at target/release/ddh
 
 ## Features
 DDH supports both a `standard` output for human comprehension and a parsable `json` output for machines.
