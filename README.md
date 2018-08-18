@@ -46,5 +46,5 @@ OPTIONS:
 ARGS:
     <Directories>...    Directories to parse
 ```
-## How
+## How Does DDH Work?
 DDH works by hashing files to determine their uniqueness and, as such, depends heavily on disk speeds for performance.
