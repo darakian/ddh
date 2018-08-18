@@ -18,7 +18,7 @@ DDH traverses input directories and their subdirectories. It also hashes files a
 * the ddh binary will then be at target/release/ddh
 
 ## Features
-DDH supports both `standard` output for human comprehension and parsable `json` output for machines.
+DDH supports both a `standard` output for human comprehension and a parsable `json` output for machines.
 
 ## Example
 ```
