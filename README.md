@@ -6,7 +6,7 @@
 # The **D**irectory **D**ifferential **h**Tool
 DDH traverses input directories and their subdirectories. It also hashes files as needed and reports findings.
 
-The H in "hTool" is silent. 
+The H in "hTool" is silent. The H in its abbreviation, "DDH," is not.
 
 This tool is called DDH for two very good reasons.
 * DDT is a dangerous pesticide
