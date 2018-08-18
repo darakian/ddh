@@ -4,11 +4,13 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/wv7tcfn0a7grjnv6?svg=true)](https://ci.appveyor.com/project/darakian/ddh)
 
 # The **D**irectory **D**ifferential **h**Tool
-The H is silent. This tool is called DDH for two very good reasons
+DDH traverses input directories and their subdirectories. It also hashes files as needed and reports findings.
+
+The H in "hTool" is silent. 
+
+This tool is called DDH for two very good reasons.
 * DDT is a dangerous pesticide
 * I mistyped when I created the project
-
-DDH traverses input directories and their subdirectories. It also hashes files as needed and reports findings.
 
 ## Install
 * Install [Rust](https://www.rust-lang.org/en-US/install.html)
