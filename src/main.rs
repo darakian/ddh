@@ -135,7 +135,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 });
             }
         },
-        _ => {println!("Somehow a vector of negative length got made. Please resport this as a bug");}
+        _ => {println!("Somehow a vector of negative length got made. Please report this as a bug");}
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));
