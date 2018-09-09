@@ -108,7 +108,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
             });
         });
     } else if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_file(){
-        sender.send(Fileinfo::new(None, None, current_path.metadata().expect("Error with current path length").len(), /*fs::canonicalize(*/current_path.to_path_buf()/*).expect("Error canonicalizing path in struct creation.")*/)).expect("Error sending new fileinfo");
+        sender.send(Fileinfo::new(None, None, current_path.metadata().expect("Error with current path length").len(), current_path.to_path_buf())).expect("Error sending new fileinfo");
     } else {}
 }
 
