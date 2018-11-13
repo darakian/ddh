@@ -131,7 +131,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     false
                 }else{false});
                 files.par_iter_mut().filter(|x| x.get_full_hash().is_some()).for_each(|file_ref| {
-                    hash_and_update(file_ref); //Skip 4KB
+                    file_ref.generate_hash();
                 });
             }
         },
@@ -142,27 +142,6 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         true
     }else{false});
     files
-}
-
-fn hash_and_update(input: &mut Fileinfo) -> (){
-    assert!(input.file_paths.iter().next().expect("Error reading path from struct").is_file());
-    let mut hasher = DefaultHasher::new();
-    match fs::File::open(input.file_paths.iter().next().expect("Error reading path")) {
-        Ok(f) => {
-            let mut buffer_reader = BufReader::new(f);
-            let mut hash_buffer = [0;4096];
-            loop {
-                match buffer_reader.read(&mut hash_buffer) {
-                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
-                    Ok(n) if n==0 => break,
-                    Err(e) => println!("{:?} reading {:?}", e, input.file_paths.iter().next().expect("Error opening file for hashing")),
-                    _ => println!("Should not be here"),
-                    }
-            }
-            input.set_full_hash(hasher.finish());
-        }
-        Err(e) => {println!("Error:{} when opening {:?}. Skipping.", e, input.file_paths.iter().next().expect("Error opening file for hashing"))}
-    }
 }
 
 fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){

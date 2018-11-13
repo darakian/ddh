@@ -72,7 +72,31 @@ impl Fileinfo{
             }
             Err(_e) => return None,
         }
-        return Some(self.partial_hash.unwrap())
+        return self.get_partial_hash()
+    }
+
+    pub fn generate_hash(&mut self) -> Option<u64>{
+        let mut hasher = DefaultHasher::new();
+        match fs::File::open(self.file_paths.iter().next().expect("Error reading path")) {
+            Ok(f) => {
+                let mut buffer_reader = BufReader::new(f);
+                let mut hash_buffer = [0;4096];
+                loop {
+                    match buffer_reader.read(&mut hash_buffer) {
+                        Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
+                        Ok(n) if n==0 => break,
+                        Err(e) => println!("{:?} reading {:?}", e, self.file_paths.iter().next().expect("Error opening file for hashing")),
+                        _ => println!("Should not be here"),
+                        }
+                }
+                self.set_full_hash(hasher.finish());
+                return self.get_full_hash()
+            }
+            Err(e) => {
+                println!("Error:{} when opening {:?}. Skipping.", e, self.file_paths.iter().next().expect("Error opening file for hashing"));
+                return None
+            }
+        }
     }
 }
 
