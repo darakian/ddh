@@ -1,9 +1,8 @@
 //Std imports
-use std::io::{Read, BufReader, stdin};
-use std::hash::{Hasher};
+use std::io::{stdin};
 use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
-use std::collections::hash_map::{DefaultHasher, HashMap, Entry};
+use std::collections::hash_map::{HashMap, Entry};
 use std::fs::{self, DirEntry};
 use std::io::prelude::*;
 
@@ -16,7 +15,7 @@ use clap::{Arg, App};
 use rayon::prelude::*;
 
 extern crate ddh;
-use ddh::{Fileinfo, PrintFmt, Verbosity}; //Struct used to store most information about the file and some extras
+use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode}; //Struct used to store most information about the file and some extras
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
@@ -121,7 +120,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         n if n>1 => {
             //Hash stage one
             files.par_iter_mut().for_each(|file_ref| {
-                file_ref.generate_partial_hash().expect("Error hashing");
+                file_ref.generate_hash(HashMode::Partial).expect("Error hashing");
             });
             files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash())); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
@@ -131,7 +130,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     false
                 }else{false});
                 files.par_iter_mut().filter(|x| x.get_full_hash().is_some()).for_each(|file_ref| {
-                    file_ref.generate_hash();
+                    file_ref.generate_hash(HashMode::Full);
                 });
             }
         },

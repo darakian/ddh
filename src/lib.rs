@@ -26,6 +26,12 @@ pub enum Verbosity{
     All,
 }
 
+#[derive(PartialEq)]
+pub enum HashMode{
+    Full,
+    Partial
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
     full_hash: Option<u64>,
@@ -49,33 +55,17 @@ impl Fileinfo{
     pub fn set_full_hash(&mut self, hash: u64) -> (){
         self.full_hash = Some(hash)
     }
+    pub fn set_partial_hash(&mut self, hash: u64) -> (){
+        self.partial_hash = Some(hash)
+    }
     pub fn get_partial_hash(&self) -> Option<u64>{
-        self.full_hash
+        self.partial_hash
     }
     pub fn get_file_name(&self) -> &str{ //Gets the first file name. More useful than a hash value as an identifier.
         self.file_paths.iter().next().unwrap().to_str().unwrap().rsplit("/").next().unwrap()
     }
 
-    pub fn generate_partial_hash(&mut self) -> Option<u64>{
-        let mut hasher = DefaultHasher::new();
-        match fs::File::open(self.file_paths.iter().next().expect("Error reading path")) {
-            Ok(f) => {
-                let mut buffer_reader = BufReader::new(f);
-                let mut hash_buffer = [0;4096];
-                match buffer_reader.read(&mut hash_buffer) {
-                    Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
-                    Ok(n) if n==0 => return None,
-                    Err(_e) => return None,
-                    _ => return None,
-                    }
-                self.partial_hash = Some(hasher.finish());
-            }
-            Err(_e) => return None,
-        }
-        return self.get_partial_hash()
-    }
-
-    pub fn generate_hash(&mut self) -> Option<u64>{
+    pub fn generate_hash(&mut self, mode: HashMode) -> Option<u64>{
         let mut hasher = DefaultHasher::new();
         match fs::File::open(self.file_paths.iter().next().expect("Error reading path")) {
             Ok(f) => {
@@ -88,6 +78,10 @@ impl Fileinfo{
                         Err(e) => println!("{:?} reading {:?}", e, self.file_paths.iter().next().expect("Error opening file for hashing")),
                         _ => println!("Should not be here"),
                         }
+                    if mode == HashMode::Partial{
+                        self.set_partial_hash(hasher.finish());
+                        return self.get_partial_hash()
+                    }
                 }
                 self.set_full_hash(hasher.finish());
                 return self.get_full_hash()
