@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate serde_derive;
-
 //Std imports
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
@@ -11,6 +8,8 @@ use std::cmp::Ordering;
 
 extern crate serde;
 extern crate serde_json;
+extern crate serde_derive;
+use serde_derive::{Serialize, Deserialize};
 
 
 #[derive(Debug, Copy, Clone)]
