@@ -1,3 +1,4 @@
 *.lock
 target/
 Results.txt
+.DS_Store
