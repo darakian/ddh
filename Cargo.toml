@@ -2,6 +2,7 @@
 name = "ddh"
 version = "0.9.8"
 authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
+edition = "2018"
 
 [dependencies]
 clap = "2.30.0"
