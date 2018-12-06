@@ -5,16 +5,8 @@ use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
 use std::fs::{self, DirEntry};
 use std::io::prelude::*;
-
-//External imports
-extern crate clap;
-extern crate rayon;
-extern crate stacker;
-extern crate serde_json;
 use clap::{Arg, App};
 use rayon::prelude::*;
-
-extern crate ddh;
 use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode}; //Struct used to store most information about the file and some extras
 
 fn main() {

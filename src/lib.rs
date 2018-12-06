@@ -5,10 +5,6 @@ use std::fs::{self};
 use std::io::{Read, BufReader};
 use std::path::PathBuf;
 use std::cmp::Ordering;
-
-extern crate serde;
-extern crate serde_json;
-extern crate serde_derive;
 use serde_derive::{Serialize, Deserialize};
 
 
