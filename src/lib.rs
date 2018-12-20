@@ -1,11 +1,10 @@
 use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use std::fs::{self};
 use std::io::{Read, BufReader};
 use std::path::PathBuf;
 use std::cmp::Ordering;
 use serde_derive::{Serialize, Deserialize};
-use siphasher::sip128::{Hasher128, Siphasher, SipHasher13, SipHasher24};
+use siphasher::sip128::Hasher128;
 
 #[derive(Debug, Copy, Clone)]
 pub enum PrintFmt{
@@ -73,11 +72,11 @@ impl Fileinfo{
                         _ => println!("Should not be here"),
                         }
                     if mode == HashMode::Partial{
-                        self.set_partial_hash(hasher.finish128().as_u128());
+                        self.set_partial_hash(hasher.finish128().into());
                         return self.get_partial_hash()
                     }
                 }
-                self.set_full_hash(hasher.finish());
+                self.set_full_hash(hasher.finish128().into());
                 return self.get_full_hash()
             }
             Err(e) => {
