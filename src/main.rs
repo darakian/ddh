@@ -1,4 +1,3 @@
-//Std imports
 use std::io::{stdin};
 use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
@@ -7,7 +6,7 @@ use std::fs::{self, DirEntry};
 use std::io::prelude::*;
 use clap::{Arg, App};
 use rayon::prelude::*;
-use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode}; //Struct used to store most information about the file and some extras
+use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode};
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
@@ -86,7 +85,6 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if !current_path.exists(){
         return
     }
-
     if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_dir(){
         let mut paths: Vec<DirEntry> = Vec::new();
         match fs::read_dir(current_path) {
