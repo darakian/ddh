@@ -1,12 +1,10 @@
-//Std imports
 use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use std::fs::{self};
 use std::io::{Read, BufReader};
 use std::path::PathBuf;
 use std::cmp::Ordering;
 use serde_derive::{Serialize, Deserialize};
-
+use siphasher::sip128::Hasher128;
 
 #[derive(Debug, Copy, Clone)]
 pub enum PrintFmt{
@@ -29,14 +27,14 @@ pub enum HashMode{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
-    full_hash: Option<u64>,
-    partial_hash: Option<u64>,
+    full_hash: Option<u128>,
+    partial_hash: Option<u128>,
     file_length: u64,
     pub file_paths: Vec<PathBuf>,
 }
 
 impl Fileinfo{
-    pub fn new(hash: Option<u64>, partial_hash: Option<u64>, length: u64, path: PathBuf) -> Self{
+    pub fn new(hash: Option<u128>, partial_hash: Option<u128>, length: u64, path: PathBuf) -> Self{
         let mut set = Vec::<PathBuf>::new();
         set.push(path);
         Fileinfo{full_hash: hash, partial_hash: partial_hash, file_length: length, file_paths: set}
@@ -44,24 +42,24 @@ impl Fileinfo{
     pub fn get_length(&self) -> u64{
         self.file_length
     }
-    pub fn get_full_hash(&self) -> Option<u64>{
+    pub fn get_full_hash(&self) -> Option<u128>{
         self.full_hash
     }
-    pub fn set_full_hash(&mut self, hash: u64) -> (){
+    pub fn set_full_hash(&mut self, hash: u128) -> (){
         self.full_hash = Some(hash)
     }
-    pub fn set_partial_hash(&mut self, hash: u64) -> (){
+    pub fn set_partial_hash(&mut self, hash: u128) -> (){
         self.partial_hash = Some(hash)
     }
-    pub fn get_partial_hash(&self) -> Option<u64>{
+    pub fn get_partial_hash(&self) -> Option<u128>{
         self.partial_hash
     }
     pub fn get_file_name(&self) -> &str{ //Gets the first file name. More useful than a hash value as an identifier.
         self.file_paths.iter().next().unwrap().to_str().unwrap().rsplit("/").next().unwrap()
     }
 
-    pub fn generate_hash(&mut self, mode: HashMode) -> Option<u64>{
-        let mut hasher = DefaultHasher::new();
+    pub fn generate_hash(&mut self, mode: HashMode) -> Option<u128>{
+        let mut hasher = siphasher::sip128::SipHasher::new();
         match fs::File::open(self.file_paths.iter().next().expect("Error reading path")) {
             Ok(f) => {
                 let mut buffer_reader = BufReader::new(f);
@@ -74,11 +72,11 @@ impl Fileinfo{
                         _ => println!("Should not be here"),
                         }
                     if mode == HashMode::Partial{
-                        self.set_partial_hash(hasher.finish());
+                        self.set_partial_hash(hasher.finish128().into());
                         return self.get_partial_hash()
                     }
                 }
-                self.set_full_hash(hasher.finish());
+                self.set_full_hash(hasher.finish128().into());
                 return self.get_full_hash()
             }
             Err(e) => {
