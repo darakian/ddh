@@ -10,7 +10,7 @@ use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode};
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                        .version("0.9.8")
+                        .version("0.9.9")
                         .author("Jon Moroney jmoroney@hawaii.edu")
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
                         .arg(Arg::with_name("directories")
