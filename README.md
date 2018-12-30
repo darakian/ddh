@@ -14,10 +14,8 @@ This tool is called DDH for two very good reasons.
 
 ## Install
 * Install [Rust](https://www.rust-lang.org/en-US/install.html)
-* ``` git clone https://github.com/darakian/ddh.git ddh ```
-* ``` cd ddh ```
-* ``` cargo build --release ```
-* The DDH binary will then be at target/release/ddh
+* `cargo install --git https://github.com/darakian/ddh ddh`
+* The DDH binary will be installed into `$CARGO_HOME/.bin/ddh`, which usually is `$HOME/.cargo/bin/ddh`. This should be in your `PATH` already if you're using rustup.
 
 ## Features
 DDH supports both a `standard` output for human comprehension and a parsable `json` output for machines.
