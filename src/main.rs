@@ -198,19 +198,18 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     //Check if output file is defined. If it exists ask for overwrite.
     match arguments.value_of("Output").unwrap_or("Results.txt"){
         "no" => {},
-        _string => {
-            let out_file = _string.rsplit("/").next().unwrap_or("Results.txt");
-            match fs::File::open(out_file) {
+        destination_string => {
+            match fs::File::open(destination_string) {
                     Ok(_f) => { //File exists.
                     println!("---");
-                    println!("File {} already exists.", out_file);
+                    println!("File {} already exists.", destination_string);
                     println!("Overwrite? Y/N");
                     let mut input = String::new();
                     match stdin().read_line(&mut input) {
                         Ok(_n) => {
                             match input.chars().next().unwrap_or(' ') {
                                 'n' | 'N' => {println!("Exiting."); return;}
-                                'y' | 'Y' => {println!("Over writing {}", out_file);}
+                                'y' | 'Y' => {println!("Over writing {}", destination_string);}
                                 _ => {println!("Exiting."); return;}
                             }
                         }
@@ -219,7 +218,7 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                 },
                 Err(_e) => {}, //File does not exist. Write away.
             }
-            write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, out_file);
+            write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, destination_string);
         },
     }
 }
