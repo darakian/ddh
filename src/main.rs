@@ -213,10 +213,13 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                                 _ => {println!("Exiting."); return;}
                             }
                         }
-                        Err(_e) => {/*Error reading user input*/},
+                        Err(_e) => {println!("Error encountered reading user input. Err: {}", _e);},
                     }
                 },
-                Err(_e) => {}, //File does not exist. Write away.
+                Err(_e) => {
+                    println!("Error encountered opening file {}. Err: {}", destination_string, _e);
+                    println!("Exiting."); return;
+                },
             }
             write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, destination_string);
         },
