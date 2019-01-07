@@ -217,8 +217,13 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                     }
                 },
                 Err(_e) => {
-                    println!("Error encountered opening file {}. Err: {}", destination_string, _e);
-                    println!("Exiting."); return;
+                    match fs::File::create(destination_string) {
+                        Ok(_f) => {},
+                        Err(_e) => {
+                            println!("Error encountered opening file {}. Err: {}", destination_string, _e);
+                            println!("Exiting."); return;
+                        }
+                    }
                 },
             }
             write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, destination_string);
