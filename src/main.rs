@@ -2,7 +2,7 @@ use std::io::{stdin};
 use std::path::{Path};
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
-use std::fs::{self, DirEntry};
+use std::fs::{self, DirEntry, OpenOptions};
 use std::io::prelude::*;
 use clap::{Arg, App};
 use rayon::prelude::*;
@@ -199,7 +199,7 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     match arguments.value_of("Output").unwrap_or("Results.txt"){
         "no" => {},
         destination_string => {
-            match fs::File::open(destination_string) {
+            match OpenOptions::new().write(true).create(true).open(destination_string) {
                     Ok(_f) => { //File exists.
                     println!("---");
                     println!("File {} already exists.", destination_string);
