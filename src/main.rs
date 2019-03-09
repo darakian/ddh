@@ -57,18 +57,18 @@ fn main() {
     .collect();
 
     //Search over user supplied directories
-    search_dirs.par_iter().for_each_with(sender.clone(), |s, search_dir| {
+    search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
         });
     });
-    drop(sender); //Drop sender so that reciever closes when all thread closures end
+    
     //Collect Fileinfo entries in a HashMap of vectors. Each vector corrosponds to a specific flie length
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
-    match files_of_lengths.entry(entry.get_length()) {
-        Entry::Vacant(e) => { e.insert(vec![entry]); },
-        Entry::Occupied(mut e) => { e.get_mut().push(entry); }
+        match files_of_lengths.entry(entry.get_length()) {
+            Entry::Vacant(e) => { e.insert(vec![entry]); },
+            Entry::Occupied(mut e) => { e.get_mut().push(entry); }
         }
     }
 
