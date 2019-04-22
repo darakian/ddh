@@ -55,12 +55,25 @@ impl Fileinfo{
         self.partial_hash
     }
     pub fn get_file_name(&self) -> &str{ //Gets the first file name. More useful than a hash value as an identifier.
-        self.file_paths.iter().next().unwrap().to_str().unwrap().rsplit("/").next().unwrap()
+        self.file_paths
+        .iter()
+        .next()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .rsplit("/")
+        .next()
+        .unwrap()
     }
 
     pub fn generate_hash(&mut self, mode: HashMode) -> Option<u128>{
         let mut hasher = siphasher::sip128::SipHasher::new();
-        match fs::File::open(self.file_paths.iter().next().expect("Error reading path")) {
+        match fs::File::open(
+            self.file_paths
+            .iter()
+            .next()
+            .expect("Cannot read file path from struct")
+            ) {
             Ok(f) => {
                 let mut buffer_reader = BufReader::new(f);
                 let mut hash_buffer = [0;4096];
@@ -73,7 +86,7 @@ impl Fileinfo{
                                 self.file_paths
                                 .iter()
                                 .next()
-                                .expect("Error reading file for hashing"));
+                                .expect("Cannot read file path from struct"));
                             return None
                         },
                         _ => panic!("Negative length read in hashing"),
@@ -91,7 +104,7 @@ impl Fileinfo{
                     self.file_paths
                     .iter()
                     .next()
-                    .expect("Error opening file for hashing"));
+                    .expect("Cannot read file path from struct"));
                 return None
             }
         }
