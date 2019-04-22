@@ -118,21 +118,23 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         n if n>1 => {
             //Hash stage one
             files.par_iter_mut().for_each(|file_ref| {
-                file_ref.generate_hash(HashMode::Partial).expect("Error hashing");
+                let hash = file_ref.generate_hash(HashMode::Partial);
+                file_ref.set_partial_hash(hash);
             });
             files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash())); //O(nlog(n))
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
                 files.dedup_by(|a, b| if a==b{ //O(n)
-                    a.set_full_hash(1);
-                    b.set_full_hash(1);
+                    a.set_full_hash(Some(1));
+                    b.set_full_hash(Some(1));
                     false
                 }else{false});
                 files.par_iter_mut().filter(|x| x.get_full_hash().is_some()).for_each(|file_ref| {
-                    file_ref.generate_hash(HashMode::Full);
+                    let hash = file_ref.generate_hash(HashMode::Full);
+                    file_ref.set_full_hash(hash);
                 });
             }
         },
-        _ => {panic!("Somehow a vector of negative length created. Please report this as a bug");}
+        _ => {panic!("Somehow a vector of negative length was created. Please report this as a bug");}
     }
     files.dedup_by(|a, b| if a==b{ //O(n)
         b.file_paths.extend(a.file_paths.drain(0..));

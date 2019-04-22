@@ -45,11 +45,11 @@ impl Fileinfo{
     pub fn get_full_hash(&self) -> Option<u128>{
         self.full_hash
     }
-    pub fn set_full_hash(&mut self, hash: u128) -> (){
-        self.full_hash = Some(hash)
+    pub fn set_full_hash(&mut self, hash: Option<u128>) -> (){
+        self.full_hash = hash
     }
-    pub fn set_partial_hash(&mut self, hash: u128) -> (){
-        self.partial_hash = Some(hash)
+    pub fn set_partial_hash(&mut self, hash: Option<u128>) -> (){
+        self.partial_hash = hash
     }
     pub fn get_partial_hash(&self) -> Option<u128>{
         self.partial_hash
@@ -68,19 +68,30 @@ impl Fileinfo{
                     match buffer_reader.read(&mut hash_buffer) {
                         Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                         Ok(n) if n==0 => break,
-                        Err(e) => println!("{:?} reading {:?}", e, self.file_paths.iter().next().expect("Error opening file for hashing")),
+                        Err(e) => {
+                            println!("{:?} reading {:?}", e, 
+                                self.file_paths
+                                .iter()
+                                .next()
+                                .expect("Error reading file for hashing"));
+                            return None
+                        },
                         _ => panic!("Negative length read in hashing"),
                         }
                     if mode == HashMode::Partial{
-                        self.set_partial_hash(hasher.finish128().into());
-                        return self.get_partial_hash()
+                        return Some(hasher.finish128().into());
+                        //return self.get_partial_hash()
                     }
                 }
-                self.set_full_hash(hasher.finish128().into());
-                return self.get_full_hash()
+                return Some(hasher.finish128().into());
+                //return self.get_full_hash()
             }
             Err(e) => {
-                println!("Error:{} when opening {:?}. Skipping.", e, self.file_paths.iter().next().expect("Error opening file for hashing"));
+                println!("Error:{} when opening {:?}. Skipping.", e, 
+                    self.file_paths
+                    .iter()
+                    .next()
+                    .expect("Error opening file for hashing"));
                 return None
             }
         }
