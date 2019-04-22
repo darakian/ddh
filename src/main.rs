@@ -88,7 +88,11 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_dir(){
         let mut paths: Vec<DirEntry> = Vec::new();
         match fs::read_dir(current_path) {
-                Ok(read_dir_results) => read_dir_results.filter(|x| x.is_ok()).for_each(|x| paths.push(x.unwrap())),
+                Ok(read_dir_results) => read_dir_results
+                .filter(|x| x.is_ok())
+                .for_each(
+                    |x| paths.push(x.unwrap())
+                    ),
                 Err(e) => println!("Skipping {:?}. {:?}", current_path, e.kind()),
             }
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
@@ -96,7 +100,11 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                 traverse_and_spawn(dir_entry.path().as_path(), s.clone());
             });
         });
-    } else if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_file(){
+    } else if current_path
+    .symlink_metadata()
+    .expect("Error getting Symlink Metadata")
+    .file_type()
+    .is_file(){
         sender.send(Fileinfo::new(None, None, current_path.metadata().expect("Error with current path length").len(), current_path.to_path_buf())).expect("Error sending new fileinfo");
     } else {}
 }

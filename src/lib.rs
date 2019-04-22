@@ -69,7 +69,7 @@ impl Fileinfo{
                         Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                         Ok(n) if n==0 => break,
                         Err(e) => println!("{:?} reading {:?}", e, self.file_paths.iter().next().expect("Error opening file for hashing")),
-                        _ => println!("Should not be here"),
+                        _ => panic!("Negative length read in hashing"),
                         }
                     if mode == HashMode::Partial{
                         self.set_partial_hash(hasher.finish128().into());
