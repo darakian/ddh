@@ -56,14 +56,12 @@ fn main() {
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
     .collect();
 
-    //Search over user supplied directories
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
         });
     });
     
-    //Collect Fileinfo entries in a HashMap of vectors. Each vector corrosponds to a specific flie length
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
         match files_of_lengths.entry(entry.get_length()) {
@@ -72,11 +70,10 @@ fn main() {
         }
     }
 
-    //Compare them files
-    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter().map(|x| //For each vector diff and compare on x.0 (length) and x.1 the vector
-        differentiate_and_consolidate(x.0, x.1)
-    ).flatten().collect();
-    //Get duplicates and singletons
+    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter()
+        .map(|x|differentiate_and_consolidate(x.0, x.1))
+        .flatten()
+        .collect();
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
     process_full_output(&shared_files, &unique_files, &complete_files, &arguments);
 }
@@ -85,14 +82,12 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     if !current_path.exists(){
         return
     }
-    if current_path.symlink_metadata().expect("Error getting Symlink Metadata").file_type().is_dir(){
+    if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
         let mut paths: Vec<DirEntry> = Vec::new();
         match fs::read_dir(current_path) {
                 Ok(read_dir_results) => read_dir_results
                 .filter(|x| x.is_ok())
-                .for_each(
-                    |x| paths.push(x.unwrap())
-                    ),
+                .for_each(|x| paths.push(x.unwrap())),
                 Err(e) => println!("Skipping {:?}. {:?}", current_path, e.kind()),
             }
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
@@ -102,10 +97,17 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
         });
     } else if current_path
     .symlink_metadata()
-    .expect("Error getting Symlink Metadata")
+    .expect("Error reading Symlink Metadata")
     .file_type()
     .is_file(){
-        sender.send(Fileinfo::new(None, None, current_path.metadata().expect("Error with current path length").len(), current_path.to_path_buf())).expect("Error sending new fileinfo");
+        sender.send(
+            Fileinfo::new(
+                None,
+                None,
+                current_path.metadata().expect("Error reading path length").len(),
+                current_path.to_path_buf()
+                )
+            ).expect("Error sending new fileinfo");
     } else {}
 }
 
@@ -116,14 +118,13 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
     match files.len(){
         1 => return files,
         n if n>1 => {
-            //Hash stage one
             files.par_iter_mut().for_each(|file_ref| {
                 let hash = file_ref.generate_hash(HashMode::Partial);
                 file_ref.set_partial_hash(hash);
             });
-            files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash())); //O(nlog(n))
+            files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash()));
             if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
-                files.dedup_by(|a, b| if a==b{ //O(n)
+                files.dedup_by(|a, b| if a==b{
                     a.set_full_hash(Some(1));
                     b.set_full_hash(Some(1));
                     false
@@ -136,7 +137,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         },
         _ => {panic!("Somehow a vector of negative length was created. Please report this as a bug");}
     }
-    files.dedup_by(|a, b| if a==b{ //O(n)
+    files.dedup_by(|a, b| if a==b{
         b.file_paths.extend(a.file_paths.drain(0..));
         true
     }else{false});
@@ -144,7 +145,6 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
 }
 
 fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){
-    //Get constants
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 2};
     let display_divisor =  1024u64.pow(display_power);
@@ -158,7 +158,6 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         "all" => Verbosity::All,
         _ => Verbosity::Quiet};
 
-    //Print primary output.
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter()
     .map(|x| x.file_paths.len() as u64)
     .sum::<u64>(),
@@ -181,7 +180,6 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     .map(|x| x.file_paths.len() as u64)
     .sum::<u64>());
 
-    //Print extended output if desired
     match (fmt, verbosity) {
         (_, Verbosity::Quiet) => {},
         (PrintFmt::Standard, Verbosity::Duplicates) => {
@@ -205,12 +203,11 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         _ => {},
     }
 
-    //Check if output file is defined. If it exists ask for overwrite.
     match arguments.value_of("Output").unwrap_or("Results.txt"){
         "no" => {},
         destination_string => {
             match fs::File::open(destination_string) {
-                    Ok(_f) => { //File exists.
+                    Ok(_f) => {
                     println!("---");
                     println!("File {} already exists.", destination_string);
                     println!("Overwrite? Y/N");

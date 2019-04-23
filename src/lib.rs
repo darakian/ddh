@@ -93,11 +93,9 @@ impl Fileinfo{
                         }
                     if mode == HashMode::Partial{
                         return Some(hasher.finish128().into());
-                        //return self.get_partial_hash()
                     }
                 }
                 return Some(hasher.finish128().into());
-                //return self.get_full_hash()
             }
             Err(e) => {
                 println!("Error:{} when opening {:?}. Skipping.", e, 
