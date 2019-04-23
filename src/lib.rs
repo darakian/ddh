@@ -54,7 +54,7 @@ impl Fileinfo{
     pub fn get_partial_hash(&self) -> Option<u128>{
         self.partial_hash
     }
-    pub fn get_file_name(&self) -> &str{ //Gets the first file name. More useful than a hash value as an identifier.
+    pub fn get_file_name(&self) -> &str{
         self.file_paths
         .iter()
         .next()
