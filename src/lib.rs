@@ -111,7 +111,9 @@ impl Fileinfo{
 
 impl PartialEq for Fileinfo{
     fn eq(&self, other: &Fileinfo) -> bool {
-        (self.file_length==other.file_length)&&(self.partial_hash==other.partial_hash)&&(self.full_hash==other.full_hash)
+        (self.file_length==other.file_length)&&
+        (self.partial_hash==other.partial_hash)&&
+        (self.full_hash==other.full_hash)
     }
 }
 impl Eq for Fileinfo{}
