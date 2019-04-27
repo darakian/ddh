@@ -3,6 +3,9 @@
 ### Windows Build Status
 [![Build status](https://ci.appveyor.com/api/projects/status/wv7tcfn0a7grjnv6?svg=true)](https://ci.appveyor.com/project/darakian/ddh)
 
+### Crates.io
+[ddh](https://crates.io/crates/ddh)
+
 # The **D**irectory **D**ifferential **h**Tool
 DDH traverses input directories and their subdirectories. It also hashes files as needed and reports findings.
 
