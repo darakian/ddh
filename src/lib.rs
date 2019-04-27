@@ -1,10 +1,13 @@
 use std::hash::{Hash, Hasher};
-use std::fs::{self};
+use std::fs::{self, DirEntry};
 use std::io::{Read, BufReader};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::cmp::Ordering;
 use serde_derive::{Serialize, Deserialize};
 use siphasher::sip128::Hasher128;
+use rayon::prelude::*;
+use std::sync::mpsc::{Sender, channel};
+use std::collections::hash_map::{HashMap, Entry};
 
 #[derive(Debug, Copy, Clone)]
 pub enum PrintFmt{
@@ -82,7 +85,7 @@ impl Fileinfo{
                         Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                         Ok(n) if n==0 => break,
                         Err(e) => {
-                            println!("{:?} reading {:?}", e, 
+                            println!("{:?} reading {:?}", e,
                                 self.file_paths
                                 .iter()
                                 .next()
@@ -98,7 +101,7 @@ impl Fileinfo{
                 return Some(hasher.finish128().into());
             }
             Err(e) => {
-                println!("Error:{} when opening {:?}. Skipping.", e, 
+                println!("Error:{} when opening {:?}. Skipping.", e,
                     self.file_paths
                     .iter()
                     .next()
@@ -134,4 +137,91 @@ impl Hash for Fileinfo{
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.full_hash.hash(state);
     }
+}
+
+pub fn dedupe_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, String>{
+    let (sender, receiver) = channel();
+    search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+            traverse_and_spawn(Path::new(&search_dir), s.clone());
+        });
+    });
+    let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
+    for entry in receiver.iter(){
+        match files_of_lengths.entry(entry.get_length()) {
+            Entry::Vacant(e) => { e.insert(vec![entry]); },
+            Entry::Occupied(mut e) => { e.get_mut().push(entry); }
+        }
+    }
+    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter()
+        .map(|x|differentiate_and_consolidate(x.0, x.1))
+        .flatten()
+        .collect();
+    Ok(complete_files)
+}
+
+fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
+    if !current_path.exists(){
+        return
+    }
+    if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
+        let mut paths: Vec<DirEntry> = Vec::new();
+        match fs::read_dir(current_path) {
+                Ok(read_dir_results) => read_dir_results
+                .filter(|x| x.is_ok())
+                .for_each(|x| paths.push(x.unwrap())),
+                Err(e) => println!("Skipping {:?}. {:?}", current_path, e.kind()),
+            }
+        paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
+            stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+                traverse_and_spawn(dir_entry.path().as_path(), s.clone());
+            });
+        });
+    } else if current_path
+    .symlink_metadata()
+    .expect("Error reading Symlink Metadata")
+    .file_type()
+    .is_file(){
+        sender.send(
+            Fileinfo::new(
+                None,
+                None,
+                current_path.metadata().expect("Error reading path length").len(),
+                current_path.to_path_buf()
+                )
+            ).expect("Error sending new fileinfo");
+    } else {}
+}
+
+fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
+    if file_length==0 || files.len()==0{
+        return files
+    }
+    match files.len(){
+        1 => return files,
+        n if n>1 => {
+            files.par_iter_mut().for_each(|file_ref| {
+                let hash = file_ref.generate_hash(HashMode::Partial);
+                file_ref.set_partial_hash(hash);
+            });
+            files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash()));
+            if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
+                files.dedup_by(|a, b| if a==b{
+                    a.set_full_hash(Some(1));
+                    b.set_full_hash(Some(1));
+                    false
+                }else{false});
+                files.par_iter_mut().filter(|x| x.get_full_hash().is_some()).for_each(|file_ref| {
+                    let hash = file_ref.generate_hash(HashMode::Full);
+                    file_ref.set_full_hash(hash);
+                });
+            }
+        },
+        _ => {panic!("Somehow a vector of negative length was created. Please report this as a bug");}
+    }
+    files.dedup_by(|a, b| if a==b{
+        b.file_paths.extend(a.file_paths.drain(0..));
+        true
+    }else{false});
+    files
 }

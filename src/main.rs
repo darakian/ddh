@@ -1,17 +1,14 @@
 use std::io::{stdin};
-use std::path::{Path};
-use std::sync::mpsc::{Sender, channel};
-use std::collections::hash_map::{HashMap, Entry};
-use std::fs::{self, DirEntry};
+use std::fs::{self};
 use std::io::prelude::*;
 use clap::{Arg, App};
 use rayon::prelude::*;
-use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode};
+use ddh::{Fileinfo, PrintFmt, Verbosity};
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
                         .author("Jon Moroney jmoroney@hawaii.edu")
-                        .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
+                        .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
                         .arg(Arg::with_name("directories")
                                .short("d")
                                .long("directories")
@@ -51,96 +48,13 @@ fn main() {
                                 .help("Sets output format."))
                         .get_matches();
 
-    let (sender, receiver) = channel();
+    //let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
     .collect();
 
-    search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
-        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-            traverse_and_spawn(Path::new(&search_dir), s.clone());
-        });
-    });
-
-    let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
-    for entry in receiver.iter(){
-        match files_of_lengths.entry(entry.get_length()) {
-            Entry::Vacant(e) => { e.insert(vec![entry]); },
-            Entry::Occupied(mut e) => { e.get_mut().push(entry); }
-        }
-    }
-
-    let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter()
-        .map(|x|differentiate_and_consolidate(x.0, x.1))
-        .flatten()
-        .collect();
+    let complete_files: Vec<Fileinfo> = ddh::dedupe_dirs(search_dirs).unwrap();
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
     process_full_output(&shared_files, &unique_files, &complete_files, &arguments);
-}
-
-fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
-    if !current_path.exists(){
-        return
-    }
-    if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
-        let mut paths: Vec<DirEntry> = Vec::new();
-        match fs::read_dir(current_path) {
-                Ok(read_dir_results) => read_dir_results
-                .filter(|x| x.is_ok())
-                .for_each(|x| paths.push(x.unwrap())),
-                Err(e) => println!("Skipping {:?}. {:?}", current_path, e.kind()),
-            }
-        paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
-            stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-                traverse_and_spawn(dir_entry.path().as_path(), s.clone());
-            });
-        });
-    } else if current_path
-    .symlink_metadata()
-    .expect("Error reading Symlink Metadata")
-    .file_type()
-    .is_file(){
-        sender.send(
-            Fileinfo::new(
-                None,
-                None,
-                current_path.metadata().expect("Error reading path length").len(),
-                current_path.to_path_buf()
-                )
-            ).expect("Error sending new fileinfo");
-    } else {}
-}
-
-fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
-    if file_length==0 || files.len()==0{
-        return files
-    }
-    match files.len(){
-        1 => return files,
-        n if n>1 => {
-            files.par_iter_mut().for_each(|file_ref| {
-                let hash = file_ref.generate_hash(HashMode::Partial);
-                file_ref.set_partial_hash(hash);
-            });
-            files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash()));
-            if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
-                files.dedup_by(|a, b| if a==b{
-                    a.set_full_hash(Some(1));
-                    b.set_full_hash(Some(1));
-                    false
-                }else{false});
-                files.par_iter_mut().filter(|x| x.get_full_hash().is_some()).for_each(|file_ref| {
-                    let hash = file_ref.generate_hash(HashMode::Full);
-                    file_ref.set_full_hash(hash);
-                });
-            }
-        },
-        _ => {panic!("Somehow a vector of negative length was created. Please report this as a bug");}
-    }
-    files.dedup_by(|a, b| if a==b{
-        b.file_paths.extend(a.file_paths.drain(0..));
-        true
-    }else{false});
-    files
 }
 
 fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){
