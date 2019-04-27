@@ -22,9 +22,10 @@ DDH supports both a `standard` output for human comprehension and a parsable `js
 
 ## Example
 ```
-Directory Difference hTool 0.9.8
+Directory Difference hTool
+Jon Moroney jmoroney@hawaii.edu
 Compare and contrast directories.
-Example invocation: ddh ~/Downloads/ -o MyFiles.txt -f standard
+Example invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates
 Example pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin
 
 USAGE:
@@ -37,7 +38,7 @@ FLAGS:
 OPTIONS:
     -b, --blocksize <Blocksize>    Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is
                                    Kilobytes. [possible values: B, K, M, G]
-    -f, --format <Format>          Sets output format. [possible values: standard, json]
+    -f, --format <Format>          Sets output format. [possible values: standard, json, off]
     -o, --output <Output>          Sets file to save all output. Use 'no' for no file output.
     -v, --verbosity <Verbosity>    Sets verbosity for printed output. [possible values: quiet, duplicates, all]
 
