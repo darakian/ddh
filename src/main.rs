@@ -10,7 +10,6 @@ use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode};
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
-                        .version("0.9.9")
                         .author("Jon Moroney jmoroney@hawaii.edu")
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared")
                         .arg(Arg::with_name("directories")
@@ -61,7 +60,7 @@ fn main() {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
         });
     });
-    
+
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     for entry in receiver.iter(){
         match files_of_lengths.entry(entry.get_length()) {
