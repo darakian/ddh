@@ -11,9 +11,7 @@ use ddh::{Fileinfo, PrintFmt, Verbosity, HashMode};
 fn main() {
     let arguments = App::new("Directory Difference hTool")
                         .author("Jon Moroney jmoroney@hawaii.edu")
-                        .about("Compare and contrast directories.\n
-                        Example invocation: ddh /home/jon/downloads /home/jon/documents -p shared\n
-                        Example pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
+                        .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -p shared\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
                         .arg(Arg::with_name("directories")
                                .short("d")
                                .long("directories")
