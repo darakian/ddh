@@ -1,3 +1,7 @@
+//! # ddh
+//!
+//! `ddh` is a collection of functions and structs to aid in analysing filesystem directories.
+
 use std::hash::{Hash, Hasher};
 use std::fs::{self, DirEntry};
 use std::io::{Read, BufReader};
@@ -139,7 +143,7 @@ impl Hash for Fileinfo{
     }
 }
 
-pub fn dedupe_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, String>{
+pub fn dedupe_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, &str>{
     let (sender, receiver) = channel();
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
