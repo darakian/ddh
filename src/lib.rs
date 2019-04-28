@@ -19,6 +19,7 @@ enum HashMode{
     Partial
 }
 
+/// Serializable struct containing entries for a specific file.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
     full_hash: Option<u128>,
@@ -130,7 +131,14 @@ impl Hash for Fileinfo{
     }
 }
 
-pub fn dedupe_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, &str>{
+/// Constructs a list of unique files from a list of directories.
+///
+/// # Examples
+/// ```
+/// let directories = vec!["/home/jon", "/home/doe"]
+/// let files = ddh::deduplicate_dirs(directories).unwrap()
+/// ```
+pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, &str>{
     let (sender, receiver) = channel();
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
