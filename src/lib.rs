@@ -13,18 +13,6 @@ use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
 
-#[derive(Debug, Copy, Clone)]
-pub enum PrintFmt{
-    Standard,
-    Json,
-    Off,
-}
-
-pub enum Verbosity{
-    Quiet,
-    Duplicates,
-    All,
-}
 
 #[derive(PartialEq)]
 pub enum HashMode{

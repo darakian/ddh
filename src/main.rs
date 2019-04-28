@@ -3,7 +3,21 @@ use std::fs::{self};
 use std::io::prelude::*;
 use clap::{Arg, App};
 use rayon::prelude::*;
-use ddh::{Fileinfo, PrintFmt, Verbosity};
+use ddh::{Fileinfo};
+
+
+#[derive(Debug, Copy, Clone)]
+pub enum PrintFmt{
+    Standard,
+    Json,
+    Off,
+}
+
+pub enum Verbosity{
+    Quiet,
+    Duplicates,
+    All,
+}
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")
