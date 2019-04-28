@@ -1,6 +1,6 @@
 [package]
 name = "ddh"
-version = "0.9.10"
+version = "0.9.11"
 authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 edition = "2018"
 description = "Compare and contrast directories"
