@@ -8,7 +8,7 @@ use ddh::{Fileinfo, PrintFmt, Verbosity};
 fn main() {
     let arguments = App::new("Directory Difference hTool")
                         .version(env!("CARGO_PKG_VERSION"))
-                        .author("Jon Moroney jmoroney@hawaii.edu")
+                        .author(env!("CARGO_PKG_AUTHORS"))
                         .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
                         .arg(Arg::with_name("directories")
                                .short("d")
