@@ -13,9 +13,8 @@ use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
 
-
 #[derive(PartialEq)]
-pub enum HashMode{
+enum HashMode{
     Full,
     Partial
 }
@@ -40,10 +39,10 @@ impl Fileinfo{
     pub fn get_full_hash(&self) -> Option<u128>{
         self.full_hash
     }
-    pub fn set_full_hash(&mut self, hash: Option<u128>) -> (){
+    fn set_full_hash(&mut self, hash: Option<u128>) -> (){
         self.full_hash = hash
     }
-    pub fn set_partial_hash(&mut self, hash: Option<u128>) -> (){
+    fn set_partial_hash(&mut self, hash: Option<u128>) -> (){
         self.partial_hash = hash
     }
     pub fn get_partial_hash(&self) -> Option<u128>{
@@ -61,7 +60,7 @@ impl Fileinfo{
         .unwrap()
     }
 
-    pub fn generate_hash(&mut self, mode: HashMode) -> Option<u128>{
+    fn generate_hash(&mut self, mode: HashMode) -> Option<u128>{
         let mut hasher = siphasher::sip128::SipHasher::new();
         match fs::File::open(
             self.file_paths
