@@ -7,7 +7,7 @@ description = "Compare and contrast directories"
 license = "MIT"
 homepage = "https://github.com/darakian/ddh"
 repository = "https://github.com/darakian/ddh"
-documentation = "https://github.com/darakian/ddh"
+documentation = "https://docs.rs/ddh"
 
 [dependencies]
 clap = "2.33.0"
