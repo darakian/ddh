@@ -25,7 +25,7 @@ pub struct Fileinfo{
     full_hash: Option<u128>,
     partial_hash: Option<u128>,
     file_length: u64,
-    pub file_paths: Vec<PathBuf>,
+    file_paths: Vec<PathBuf>,
 }
 
 impl Fileinfo{
@@ -49,7 +49,7 @@ impl Fileinfo{
     pub fn get_partial_hash(&self) -> Option<u128>{
         self.partial_hash
     }
-    pub fn get_file_name(&self) -> &str{
+    pub fn get_candidate_name(&self) -> &str{
         self.file_paths
         .iter()
         .next()
@@ -59,6 +59,9 @@ impl Fileinfo{
         .rsplit("/")
         .next()
         .unwrap()
+    }
+    pub fn get_paths(&self) -> &Vec<PathBuf>{
+        return &self.file_paths
     }
 
     fn generate_hash(&mut self, mode: HashMode) -> Option<u128>{

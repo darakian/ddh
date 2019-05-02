@@ -68,7 +68,7 @@ fn main() {
     .collect();
 
     let complete_files: Vec<Fileinfo> = ddh::deduplicate_dirs(search_dirs).unwrap();
-    let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.file_paths.len()>1);
+    let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.get_paths().len()>1);
     process_full_output(&shared_files, &unique_files, &complete_files, &arguments);
 }
 
@@ -87,10 +87,10 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
         _ => Verbosity::Quiet};
 
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter()
-    .map(|x| x.file_paths.len() as u64)
+    .map(|x| x.get_paths().len() as u64)
     .sum::<u64>(),
     complete_files.par_iter()
-    .map(|x| (x.file_paths.len() as u64)*x.get_length())
+    .map(|x| (x.get_paths().len() as u64)*x.get_length())
     .sum::<u64>()/(display_divisor),
     blocksize);
     println!("{} Total files (without duplicates): {} {}", complete_files.len(), complete_files.par_iter()
@@ -105,22 +105,22 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     .map(|x| x.get_length())
     .sum::<u64>()/(display_divisor),
     blocksize, shared_files.par_iter()
-    .map(|x| x.file_paths.len() as u64)
+    .map(|x| x.get_paths().len() as u64)
     .sum::<u64>());
 
     match (fmt, verbosity) {
         (_, Verbosity::Quiet) => {},
         (PrintFmt::Standard, Verbosity::Duplicates) => {
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {} with file length {}:", x.get_file_name(), x.get_length());
-            x.file_paths.par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));})
+            println!("instances of {} with file length {}:", x.get_candidate_name(), x.get_length());
+            x.get_paths().par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Standard, Verbosity::All) => {
             println!("Single instance files"); unique_files.par_iter()
-            .for_each(|x| println!("{}", x.file_paths.iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
+            .for_each(|x| println!("{}", x.get_paths().iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
-            println!("instances of {} with file length {}:", x.get_file_name(), x.get_length());
-            x.file_paths.par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));})
+            println!("instances of {} with file length {}:", x.get_candidate_name(), x.get_length());
+            x.get_paths().par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));})
         },
         (PrintFmt::Json, Verbosity::Duplicates) => {
             println!("{}", serde_json::to_string(shared_files).unwrap_or("".to_string()));
@@ -172,17 +172,17 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
         PrintFmt::Standard => {
             output.write_fmt(format_args!("Duplicates:\n")).unwrap();
             for file in shared_files.into_iter(){
-                let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
+                let title = file.get_paths().get(0).unwrap().file_name().unwrap().to_str().unwrap();
                 output.write_fmt(format_args!("{}\n", title)).unwrap();
-                for entry in file.file_paths.iter(){
+                for entry in file.get_paths().iter(){
                     output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
                 }
             }
             output.write_fmt(format_args!("Singletons:\n")).unwrap();
             for file in unique_files.into_iter(){
-                let title = file.file_paths.get(0).unwrap().file_name().unwrap().to_str().unwrap();
+                let title = file.get_paths().get(0).unwrap().file_name().unwrap().to_str().unwrap();
                 output.write_fmt(format_args!("{}\n", title)).unwrap();
-                for entry in file.file_paths.iter(){
+                for entry in file.get_paths().iter(){
                     output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
                 }
             }
