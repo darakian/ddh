@@ -3,7 +3,7 @@
 //! `ddh` is a collection of functions and structs to aid in analysing filesystem directories.
 
 use std::hash::{Hash, Hasher};
-use std::fs::{self, DirEntry};
+use std::fs::{self};
 use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
 use std::cmp::Ordering;
@@ -180,11 +180,14 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
         return
     }
     if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
-        let mut paths: Vec<DirEntry> = Vec::new();
         match fs::read_dir(current_path) {
                 Ok(read_dir_results) => read_dir_results
                 .filter(|x| x.is_ok())
-                .for_each(|x| paths.push(x.unwrap())),
+                .for_each(|x| {
+                    stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+                        traverse_and_spawn(x.unwrap().path().as_path(), sender.clone());
+                    })
+                }),
                 Err(e) => {
                     println!("Skipping {:?}. {:?}", current_path, e.kind());
                     sender.send(
@@ -192,11 +195,6 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                         ).expect("Error sending new cpkg::fail");
                 },
             }
-        paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
-            stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-                traverse_and_spawn(dir_entry.path().as_path(), s.clone());
-            });
-        });
     } else if current_path
     .symlink_metadata()
     .expect("Error reading Symlink Metadata")
