@@ -84,12 +84,12 @@ impl Fileinfo{
                     match buffer_reader.read(&mut hash_buffer) {
                         Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                         Ok(n) if n==0 => break,
-                        Err(e) => {
-                            println!("{:?} reading {:?}", e,
-                                self.file_paths
-                                .iter()
-                                .next()
-                                .expect("Cannot read file path from struct"));
+                        Err(_e) => {
+                            // println!("{:?} reading {:?}", e,
+                            //     self.file_paths
+                            //     .iter()
+                            //     .next()
+                            //     .expect("Cannot read file path from struct"));
                             return None
                         },
                         _ => panic!("Negative length read in hashing"),
@@ -100,12 +100,12 @@ impl Fileinfo{
                 }
                 return Some(hasher.finish128().into());
             }
-            Err(e) => {
-                println!("Error:{} when opening {:?}. Skipping.", e,
-                    self.file_paths
-                    .iter()
-                    .next()
-                    .expect("Cannot read file path from struct"));
+            Err(_e) => {
+                // println!("Error:{} when opening {:?}. Skipping.", e,
+                //     self.file_paths
+                //     .iter()
+                //     .next()
+                //     .expect("Cannot read file path from struct"));
                 return None
             }
         }
@@ -169,7 +169,7 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf,
         }
     }
     let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter()
-        .map(|x|differentiate_and_consolidate(x.0, x.1))
+        .map(|x| differentiate_and_consolidate(x.0, x.1))
         .flatten()
         .collect();
     (complete_files, errors)

@@ -6,7 +6,6 @@ use rayon::prelude::*;
 use ddh::{Fileinfo};
 use std::path::{PathBuf};
 
-
 #[derive(Debug, Copy, Clone)]
 pub enum PrintFmt{
     Standard,
@@ -70,10 +69,10 @@ fn main() {
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) = ddh::deduplicate_dirs(search_dirs);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.get_paths().len()>1);
-    process_full_output(&shared_files, &unique_files, &complete_files, &arguments);
+    process_full_output(&shared_files, &unique_files, &complete_files, &read_errors, &arguments);
 }
 
-fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, arguments: &clap::ArgMatches) ->(){
+fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, error_paths: &Vec<(PathBuf, std::io::Error)>, arguments: &clap::ArgMatches) ->(){
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 2};
     let display_divisor =  1024u64.pow(display_power);
@@ -121,7 +120,10 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
             .for_each(|x| println!("{}", x.get_paths().iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
             println!("instances of {} with file length {}:", x.get_candidate_name(), x.get_length());
-            x.get_paths().par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));})
+            x.get_paths().par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));});
+            error_paths.iter().for_each(|x|{
+                println!("Could not process {:#?} due to error {:#?}", x.0, x.1.kind());
+            })
         },
         (PrintFmt::Json, Verbosity::Duplicates) => {
             println!("{}", serde_json::to_string(shared_files).unwrap_or("".to_string()));
