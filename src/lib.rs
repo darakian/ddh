@@ -182,11 +182,11 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
     if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
         match fs::read_dir(current_path) {
                 Ok(read_dir_results) => {
-                let good_dirs: Vec<_> = read_dir_results
+                let good_entries: Vec<_> = read_dir_results
                 .filter(|x| x.is_ok())
                 .map(|x| x.unwrap())
                 .collect();
-                good_dirs.into_par_iter()
+                good_entries.into_par_iter()
                 .for_each_with(sender, |sender, x| {
                     stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
                         traverse_and_spawn(x.path().as_path(), sender.clone());
