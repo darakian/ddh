@@ -68,7 +68,7 @@ fn main() {
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
     .collect();
 
-    let (complete_files, read_errors): (Vec<Fileinfo>, Vec<PathBuf>) = ddh::deduplicate_dirs(search_dirs);
+    let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) = ddh::deduplicate_dirs(search_dirs);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.get_paths().len()>1);
     process_full_output(&shared_files, &unique_files, &complete_files, &arguments);
 }

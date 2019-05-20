@@ -21,7 +21,7 @@ enum HashMode{
 
 enum ChannelPackage{
     Success(Fileinfo),
-    Fail(PathBuf), 
+    Fail(PathBuf, std::io::Error), 
 }
 
 /// Serializable struct containing entries for a specific file.
@@ -146,7 +146,7 @@ impl Hash for Fileinfo{
 /// let directories = vec!["/home/jon", "/home/doe"];
 /// let (files, errors) = ddh::deduplicate_dirs(directories);
 /// ```
-pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<PathBuf>){
+pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>){
     let (sender, receiver) = channel();
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
@@ -163,8 +163,8 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<PathBuf>)
                     Entry::Occupied(mut e) => { e.get_mut().push(entry); }
                 }
             },
-            ChannelPackage::Fail(entry) => {
-                errors.push(entry);
+            ChannelPackage::Fail(entry, error) => {
+                errors.push((entry, error));
             },
         }
     }
@@ -194,10 +194,9 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                 })
             },
                 Err(e) => {
-                    println!("Skipping {:?}. {:?}", current_path, e.kind());
                     sender.send(
-                        ChannelPackage::Fail(current_path.to_path_buf())
-                        ).expect("Error sending new cpkg::fail");
+                        ChannelPackage::Fail(current_path.to_path_buf(), e)
+                        ).expect("Error sending new ChannelPackage::Fail");
                 },
             }
     } else if current_path
@@ -212,7 +211,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                 current_path.metadata().expect("Error reading path length").len(),
                 current_path.to_path_buf()
                 ))
-            ).expect("Error sending new cpkg::success");
+            ).expect("Error sending new ChannelPackage::Success");
     } else {}
 }
 
