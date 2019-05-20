@@ -144,7 +144,7 @@ impl Hash for Fileinfo{
 /// # Examples
 /// ```
 /// let directories = vec!["/home/jon", "/home/doe"];
-/// let files = ddh::deduplicate_dirs(directories).unwrap();
+/// let (files, errors) = ddh::deduplicate_dirs(directories);
 /// ```
 pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<PathBuf>){
     let (sender, receiver) = channel();
