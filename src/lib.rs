@@ -19,6 +19,11 @@ enum HashMode{
     Partial
 }
 
+enum ChannelPackage{
+    Success(Fileinfo),
+    Fail(PathBuf), 
+}
+
 /// Serializable struct containing entries for a specific file.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Fileinfo{
@@ -141,7 +146,7 @@ impl Hash for Fileinfo{
 /// let directories = vec!["/home/jon", "/home/doe"];
 /// let files = ddh::deduplicate_dirs(directories).unwrap();
 /// ```
-pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, &str>{
+pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<PathBuf>){
     let (sender, receiver) = channel();
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
         stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
@@ -149,20 +154,28 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> Result<Vec<Fileinfo>, &str>{
         });
     });
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
-    for entry in receiver.iter(){
-        match files_of_lengths.entry(entry.get_length()) {
-            Entry::Vacant(e) => { e.insert(vec![entry]); },
-            Entry::Occupied(mut e) => { e.get_mut().push(entry); }
+    let mut errors = Vec::new();
+    for pkg in receiver.iter(){
+        match pkg{
+            ChannelPackage::Success(entry) => {
+                match files_of_lengths.entry(entry.get_length()) {
+                    Entry::Vacant(e) => { e.insert(vec![entry]); },
+                    Entry::Occupied(mut e) => { e.get_mut().push(entry); }
+                }
+            },
+            ChannelPackage::Fail(entry) => {
+                errors.push(entry);
+            },
         }
     }
     let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter()
         .map(|x|differentiate_and_consolidate(x.0, x.1))
         .flatten()
         .collect();
-    Ok(complete_files)
+    (complete_files, errors)
 }
 
-fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
+fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
     if !current_path.exists(){
         return
     }
@@ -172,7 +185,12 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
                 Ok(read_dir_results) => read_dir_results
                 .filter(|x| x.is_ok())
                 .for_each(|x| paths.push(x.unwrap())),
-                Err(e) => println!("Skipping {:?}. {:?}", current_path, e.kind()),
+                Err(e) => {
+                    println!("Skipping {:?}. {:?}", current_path, e.kind());
+                    sender.send(
+                        ChannelPackage::Fail(current_path.to_path_buf())
+                        ).expect("Error sending new cpkg::fail");
+                },
             }
         paths.into_par_iter().for_each_with(sender, |s, dir_entry| {
             stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
@@ -184,14 +202,14 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<Fileinfo>) -> (){
     .expect("Error reading Symlink Metadata")
     .file_type()
     .is_file(){
-        sender.send(
+        sender.send(ChannelPackage::Success(
             Fileinfo::new(
                 None,
                 None,
                 current_path.metadata().expect("Error reading path length").len(),
                 current_path.to_path_buf()
-                )
-            ).expect("Error sending new fileinfo");
+                ))
+            ).expect("Error sending new cpkg::success");
     } else {}
 }
 
