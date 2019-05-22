@@ -179,7 +179,21 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
     if !current_path.exists(){
         return
     }
-    if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
+    if current_path
+    .symlink_metadata()
+    .expect("Error reading Symlink Metadata")
+    .file_type()
+    .is_file(){
+        sender.send(ChannelPackage::Success(
+            Fileinfo::new(
+                None,
+                None,
+                current_path.metadata().expect("Error reading path length").len(),
+                current_path.to_path_buf()
+                ))
+            ).expect("Error sending new ChannelPackage::Success");
+    }
+    else if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
         match fs::read_dir(current_path) {
                 Ok(read_dir_results) => {
                 let good_entries: Vec<_> = read_dir_results
@@ -199,19 +213,6 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                         ).expect("Error sending new ChannelPackage::Fail");
                 },
             }
-    } else if current_path
-    .symlink_metadata()
-    .expect("Error reading Symlink Metadata")
-    .file_type()
-    .is_file(){
-        sender.send(ChannelPackage::Success(
-            Fileinfo::new(
-                None,
-                None,
-                current_path.metadata().expect("Error reading path length").len(),
-                current_path.to_path_buf()
-                ))
-            ).expect("Error sending new ChannelPackage::Success");
     } else {}
 }
 
