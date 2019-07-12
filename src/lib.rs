@@ -149,9 +149,7 @@ impl Hash for Fileinfo{
 pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>){
     let (sender, receiver) = channel();
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
-        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
-        });
     });
     let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     let mut errors = Vec::new();
@@ -202,9 +200,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                 .collect();
                 good_entries.into_par_iter()
                 .for_each_with(sender, |sender, x| {
-                    stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
                         traverse_and_spawn(x.path().as_path(), sender.clone());
-                    })
                 })
             },
                 Err(e) => {
