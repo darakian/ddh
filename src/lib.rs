@@ -86,11 +86,6 @@ impl Fileinfo{
                         Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
                         Ok(n) if n==0 => break,
                         Err(_e) => {
-                            // println!("{:?} reading {:?}", e,
-                            //     self.file_paths
-                            //     .iter()
-                            //     .next()
-                            //     .expect("Cannot read file path from struct"));
                             return None
                         },
                         _ => panic!("Negative length read in hashing"),
@@ -102,11 +97,6 @@ impl Fileinfo{
                 return Some(hasher.finish128().into());
             }
             Err(_e) => {
-                // println!("Error:{} when opening {:?}. Skipping.", e,
-                //     self.file_paths
-                //     .iter()
-                //     .next()
-                //     .expect("Cannot read file path from struct"));
                 return None
             }
         }
