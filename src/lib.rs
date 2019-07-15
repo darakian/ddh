@@ -12,6 +12,7 @@ use siphasher::sip128::Hasher128;
 use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
+use std::io::{Error, ErrorKind};
 
 #[derive(PartialEq)]
 enum HashMode{
@@ -174,15 +175,24 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf,
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    if !current_path.exists(){
+    let tmp_md = fs::metadata(current_path);
+    if tmp_md.is_err() {
+        sender.send(
+        ChannelPackage::Fail(current_path.to_path_buf(), tmp_md.err().unwrap())
+        ).expect("Error sending new ChannelPackage::Fail");
         return
     }
-    if current_path
-    .symlink_metadata()
-    .expect("Error reading Symlink Metadata")
-    .file_type()
-    .is_file(){
-        sender.send(ChannelPackage::Success(
+    let current_path_metadata = tmp_md.unwrap();
+
+    if current_path_metadata.file_type().is_symlink(){
+        sender.send(
+        ChannelPackage::Fail(current_path.to_path_buf(), Error::new(ErrorKind::Other, "Path is symlink"))
+        ).expect("Error sending new ChannelPackage::Fail");
+        return
+    }
+
+    if current_path_metadata.file_type().is_file(){
+            sender.send(ChannelPackage::Success(
             Fileinfo::new(
                 None,
                 None,
@@ -190,8 +200,10 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                 current_path.to_path_buf()
                 ))
             ).expect("Error sending new ChannelPackage::Success");
+        return
     }
-    else if current_path.symlink_metadata().expect("Error reading Symlink Metadata").file_type().is_dir(){
+
+    if current_path_metadata.file_type().is_dir(){
         match fs::read_dir(current_path) {
                 Ok(read_dir_results) => {
                 let good_entries: Vec<_> = read_dir_results
@@ -206,17 +218,15 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                     .file_type()
                     .is_file()
                     );
-
                 files.par_iter().for_each_with(sender.clone(), |sender, x| 
                     sender.send(ChannelPackage::Success(
-                Fileinfo::new(
-                    None,
-                    None,
-                    x.metadata().expect("Error reading path length").len(),
-                    x.path()))
-                    ).expect("Error sending new ChannelPackage::Success")
-                    );
-
+                        Fileinfo::new(
+                            None,
+                            None,
+                            x.metadata().expect("Error reading path length").len(),
+                            x.path()))
+                            ).expect("Error sending new ChannelPackage::Success")
+                        );
                 dirs.into_par_iter()
                 .for_each_with(sender, |sender, x| {
                         traverse_and_spawn(x.path().as_path(), sender.clone());
