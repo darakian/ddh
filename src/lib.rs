@@ -3,7 +3,7 @@
 //! `ddh` is a collection of functions and structs to aid in analysing filesystem directories.
 
 use std::hash::{Hash, Hasher};
-use std::fs::{self};
+use std::fs::{self, DirEntry};
 use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
 use std::cmp::Ordering;
@@ -198,7 +198,26 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                 .filter(|x| x.is_ok())
                 .map(|x| x.unwrap())
                 .collect();
-                good_entries.into_par_iter()
+                let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x| 
+                    x.path()
+                    .as_path()
+                    .symlink_metadata()
+                    .expect("Error reading Symlink Metadata")
+                    .file_type()
+                    .is_file()
+                    );
+
+                files.par_iter().for_each_with(sender.clone(), |sender, x| 
+                    sender.send(ChannelPackage::Success(
+                Fileinfo::new(
+                    None,
+                    None,
+                    x.metadata().expect("Error reading path length").len(),
+                    x.path()))
+                    ).expect("Error sending new ChannelPackage::Success")
+                    );
+
+                dirs.into_par_iter()
                 .for_each_with(sender, |sender, x| {
                         traverse_and_spawn(x.path().as_path(), sender.clone());
                 })
