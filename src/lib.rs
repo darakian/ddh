@@ -2,7 +2,7 @@
 //!
 //! `ddh` is a collection of functions and structs to aid in analysing filesystem directories.
 
-use std::hash::{Hash, Hasher};
+use std::hash::{Hasher};
 use std::fs::{self, DirEntry};
 use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
@@ -22,7 +22,7 @@ enum HashMode{
 
 enum ChannelPackage{
     Success(Fileinfo),
-    Fail(PathBuf, std::io::Error), 
+    Fail(PathBuf, std::io::Error),
 }
 
 /// Serializable struct containing entries for a specific file.
@@ -114,19 +114,25 @@ impl Eq for Fileinfo{}
 
 impl PartialOrd for Fileinfo{
     fn partial_cmp(&self, other: &Fileinfo) -> Option<Ordering>{
-        self.file_length.partial_cmp(&other.file_length)
+         if self.full_hash.is_some() && other.full_hash.is_some(){
+            Some(self.full_hash.cmp(&other.full_hash))
+        } else if self.partial_hash.is_some() && other.partial_hash.is_some(){
+            Some(self.partial_hash.cmp(&other.partial_hash))
+        } else {
+            Some(self.file_length.cmp(&other.file_length))
+        }
     }
 }
 
 impl Ord for Fileinfo{
     fn cmp(&self, other: &Fileinfo) -> Ordering {
-        self.file_length.cmp(&other.file_length)
-    }
-}
-
-impl Hash for Fileinfo{
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.full_hash.hash(state);
+        if self.full_hash.is_some() && other.full_hash.is_some(){
+            self.full_hash.cmp(&other.full_hash)
+        } else if self.partial_hash.is_some() && other.partial_hash.is_some(){
+            self.partial_hash.cmp(&other.partial_hash)
+        } else {
+            self.file_length.cmp(&other.file_length)
+        }
     }
 }
 
@@ -200,7 +206,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                     .filter(|x| x.is_ok())
                     .map(|x| x.unwrap())
                     .collect();
-                    let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x| 
+                    let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x|
                         x.path()
                         .as_path()
                         .symlink_metadata()
@@ -208,7 +214,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                         .file_type()
                         .is_file()
                         );
-                    files.par_iter().for_each_with(sender.clone(), |sender, x| 
+                    files.par_iter().for_each_with(sender.clone(), |sender, x|
                         sender.send(ChannelPackage::Success(
                             Fileinfo::new(
                                 None,
@@ -232,8 +238,11 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
-    if file_length==0 || files.len()==0{
+    if file_length==0{
         return files
+    }
+    if files.len()<=0{
+        panic!("Invalid length vector");
     }
     match files.len(){
         1 => return files,
@@ -242,24 +251,62 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 let hash = file_ref.generate_hash(HashMode::Partial);
                 file_ref.set_partial_hash(hash);
             });
-            files.par_sort_unstable_by(|a, b| b.get_partial_hash().cmp(&a.get_partial_hash()));
-            if file_length>4096 /*4KB*/ { //only hash again if we are not done hashing
-                files.dedup_by(|a, b| if a==b{
-                    a.set_full_hash(Some(1));
-                    b.set_full_hash(Some(1));
-                    false
-                }else{false});
-                files.par_iter_mut().filter(|x| x.get_full_hash().is_some()).for_each(|file_ref| {
-                    let hash = file_ref.generate_hash(HashMode::Full);
-                    file_ref.set_full_hash(hash);
+            if file_length<=4096{
+                files.par_iter_mut().for_each(|x|{
+                    let hash = x.get_partial_hash().unwrap();
+                    x.set_full_hash(Some(hash)) ;
                 });
+                // files.par_sort();
+                // files.dedup_by(|a, b| if a==b{
+                //     b.file_paths.extend(a.file_paths.drain(..));
+                //     true
+                // }else{false});
+                return dedupe(files)
             }
+            let mut partial_hashes: HashMap<u128, u64> = HashMap::new();
+            for file in files.iter(){
+                match partial_hashes.entry(file.get_partial_hash().unwrap()){
+                    Entry::Vacant(e) => { e.insert(0); },
+                    Entry::Occupied(mut e) => {*e.get_mut()+=1;}
+                }
+            }
+            let dedupe_hashes: Vec<_> = partial_hashes
+                .into_iter()
+                .filter(|x| x.1>0)
+                .map(|y| y.0)
+                .collect();
+            files.par_iter_mut().for_each(|x|
+                if dedupe_hashes.contains(&x.get_partial_hash().unwrap()){
+                    let hash = x.generate_hash(HashMode::Full);
+                    x.set_full_hash(hash);
+                }
+            );
         },
         _ => {panic!("Somehow a vector of negative length was created. Please report this as a bug");}
     }
-    files.dedup_by(|a, b| if a==b{
-        b.file_paths.extend(a.file_paths.drain(0..));
-        true
-    }else{false});
+    dedupe(files)
+    // files.par_sort();
+    // files.dedup_by(|a, b| if a==b{
+    //     b.file_paths.extend(a.file_paths.drain(..));
+    //     true
+    // }else{false});
+    // files
+}
+
+fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
+    let mut cache: HashMap<(Option<u128>, Option<u128>), _> = HashMap::new();
+    for file in files.iter_mut(){
+        match cache.entry((file.get_partial_hash(), file.get_full_hash())){
+                    Entry::Vacant(e) => {
+                        e.insert(file);
+                    },
+                    Entry::Occupied(mut e) => {
+                        e.get_mut()
+                        .file_paths
+                        .extend(file.file_paths.drain(..));
+                    }
+                }
+    }
+    files.retain(|x| x.get_paths().len()>0);
     files
 }
