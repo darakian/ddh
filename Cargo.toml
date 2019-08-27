@@ -20,3 +20,7 @@ siphasher = "0.3"
 [profile.release]
 lto = true
 debug=false
+
+[package]
+description = "Manage duplicate files"
+readme = "README.md"
