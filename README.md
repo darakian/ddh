@@ -18,7 +18,7 @@ This tool is called DDH for two very good reasons.
 * The DDH binary will be installed into `$CARGO_HOME/.bin/ddh`, which usually is `$HOME/.cargo/bin/ddh`. This should be in your `PATH` already if you're using rustup.
 
 ## Features
-DDH supports both a `standard` output for human comprehension and a parsable `json` output for machines.
+DDH supports both a `standard` output for human comprehension and a parsable `json` output for custom tools such as [ddh-move](https://github.com/JayWalker512/ddh-move).
 
 ## Example
 ```
