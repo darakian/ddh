@@ -256,11 +256,6 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                     let hash = x.get_partial_hash().unwrap();
                     x.set_full_hash(Some(hash)) ;
                 });
-                // files.par_sort();
-                // files.dedup_by(|a, b| if a==b{
-                //     b.file_paths.extend(a.file_paths.drain(..));
-                //     true
-                // }else{false});
                 return dedupe(files)
             }
             let mut partial_hashes: HashMap<u128, u64> = HashMap::new();
@@ -285,12 +280,6 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         _ => {panic!("Somehow a vector of negative length was created. Please report this as a bug");}
     }
     dedupe(files)
-    // files.par_sort();
-    // files.dedup_by(|a, b| if a==b{
-    //     b.file_paths.extend(a.file_paths.drain(..));
-    //     true
-    // }else{false});
-    // files
 }
 
 fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
