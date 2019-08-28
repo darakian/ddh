@@ -8,6 +8,7 @@ license = "MIT"
 homepage = "https://github.com/darakian/ddh"
 repository = "https://github.com/darakian/ddh"
 documentation = "https://docs.rs/ddh"
+readme = "README.md"
 
 [dependencies]
 clap = "2.33.0"
@@ -20,7 +21,3 @@ siphasher = "0.3"
 [profile.release]
 lto = true
 debug=false
-
-[package]
-description = "Manage duplicate files"
-readme = "README.md"
