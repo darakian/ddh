@@ -12,15 +12,25 @@ This tool is called DDH for two very good reasons.
 * DDT is a dangerous pesticide
 * I mistyped when I created the project
 
-## Install
+## Usage
+DDH is usable both as a library and as a stand alone CLI tool and aims to be simple to use in both cases.
+
+## Library example
+```
+let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) = ddh::deduplicate_dirs(search_dirs);
+let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.get_paths().len()>1);
+process_full_output(&shared_files, &unique_files, &complete_files, &read_errors, &arguments);
+```
+
+## CLI Install
 * Install [Rust](https://www.rust-lang.org/en-US/install.html)
 * `cargo install --git https://github.com/darakian/ddh ddh`
 * The DDH binary will be installed into `$CARGO_HOME/.bin/ddh`, which usually is `$HOME/.cargo/bin/ddh`. This should be in your `PATH` already if you're using rustup.
 
-## Features
+## CLI Features
 DDH supports both a `standard` output for human comprehension and a parsable `json` output for custom tools such as [ddh-move](https://github.com/JayWalker512/ddh-move).
 
-## Example
+## CLI Example
 ```
 Directory Difference hTool
 Jon Moroney jmoroney@hawaii.edu
@@ -46,7 +56,7 @@ ARGS:
     <Directories>...    Directories to parse
 ```
 ## How Does DDH Work?
-DDH works by hashing files to determine their uniqueness and, as such, depends heavily on disk speeds for performance.
+DDH works by hashing files to determine their uniqueness and, as such, depends heavily on disk speeds for performance. The algorithmic choices in use are discussed [here](https://darakian.github.io/2018/04/02/how-many-bytes-does-it-take.html).
 
 ### Crates.io link
 [ddh](https://crates.io/crates/ddh)
