@@ -13,6 +13,7 @@ use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
 use std::io::{Error, ErrorKind};
+use nohash_hasher::IntMap;
 
 #[derive(PartialEq)]
 enum HashMode{
@@ -148,7 +149,8 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf,
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
             traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
-    let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
+    let mut files_of_lengths: IntMap<u64, Vec<Fileinfo>> = IntMap::default();
+    //let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     let mut errors = Vec::new();
     for pkg in receiver.iter(){
         match pkg{
