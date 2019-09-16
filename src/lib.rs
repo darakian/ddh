@@ -150,7 +150,6 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf,
             traverse_and_spawn(Path::new(&search_dir), s.clone());
     });
     let mut files_of_lengths: IntMap<u64, Vec<Fileinfo>> = IntMap::default();
-    //let mut files_of_lengths: HashMap<u64, Vec<Fileinfo>> = HashMap::new();
     let mut errors = Vec::new();
     for pkg in receiver.iter(){
         match pkg{
