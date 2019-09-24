@@ -284,7 +284,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
 }
 
 fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
-    let mut cache: HashMap<(Option<u128>, Option<u128>), _> = HashMap::new();
+    let mut cache: HashMap<(Option<u128>, Option<u128>), &mut Fileinfo> = HashMap::new();
     for file in files.iter_mut(){
         match cache.entry((file.get_partial_hash(), file.get_full_hash())){
                     Entry::Vacant(e) => {
