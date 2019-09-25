@@ -170,14 +170,15 @@ pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf,
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    let tmp_md = fs::metadata(current_path);
-    if tmp_md.is_err() {
-        sender.send(
-        ChannelPackage::Fail(current_path.to_path_buf(), tmp_md.err().unwrap())
-        ).expect("Error sending new ChannelPackage::Fail");
-        return
-    }
-    let current_path_metadata = tmp_md.unwrap();
+    let current_path_metadata = match fs::metadata(current_path) {
+        Err(e) =>{
+            sender.send(
+            ChannelPackage::Fail(current_path.to_path_buf(), e)
+            ).expect("Error sending new ChannelPackage::Fail");
+            return
+        },
+        Ok(meta) => meta,
+    };
 
     if current_path_metadata.file_type().is_symlink(){
         sender.send(
