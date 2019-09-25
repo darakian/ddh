@@ -37,9 +37,7 @@ pub struct Fileinfo{
 
 impl Fileinfo{
     pub fn new(hash: Option<u128>, partial_hash: Option<u128>, length: u64, path: PathBuf) -> Self{
-        let mut set = Vec::<PathBuf>::with_capacity(1);
-        set.push(path);
-        Fileinfo{full_hash: hash, partial_hash: partial_hash, file_length: length, file_paths: set}
+        Fileinfo{full_hash: hash, partial_hash: partial_hash, file_length: length, file_paths: vec![path]}
     }
     pub fn get_length(&self) -> u64{
         self.file_length
