@@ -253,8 +253,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
             });
             if file_length<=4096{
                 files.par_iter_mut().for_each(|x|{
-                    let hash = x.get_partial_hash().unwrap();
-                    x.set_full_hash(Some(hash)) ;
+                    x.set_full_hash(x.get_partial_hash()) ;
                 });
                 return dedupe(files)
             }
