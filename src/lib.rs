@@ -7,7 +7,7 @@ use std::fs::{self, DirEntry};
 use std::io::{Read, BufReader};
 use std::path::{PathBuf, Path};
 use std::cmp::Ordering;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Serialize};
 use siphasher::sip128::Hasher128;
 use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
@@ -27,7 +27,7 @@ enum ChannelPackage{
 }
 
 /// Serializable struct containing entries for a specific file.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct Fileinfo{
     full_hash: Option<u128>,
     partial_hash: Option<u128>,
