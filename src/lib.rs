@@ -83,11 +83,11 @@ impl Fileinfo{
                 /* We want a read call to be "large" for two reasons
                 1) Force filesystem read ahead behavior
                 2) Fewer system calls for a given file.
-                Currently 64KB which is half of a default RHEL read ahead buffer */
-                let mut hash_buffer = [0;BLOCK_SIZE * 16];
+                Currently 16KB  */
+                let mut hash_buffer = [0;BLOCK_SIZE * 4];
                 loop {
                     match f.read(&mut hash_buffer) {
-                        Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
+                        Ok(n) if n>0 => hasher.write(&hash_buffer),
                         Ok(n) if n==0 => break,
                         Err(_e) => {
                             return None
