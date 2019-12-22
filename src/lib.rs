@@ -4,7 +4,7 @@
 
 use std::hash::{Hasher};
 use std::fs::{self, DirEntry};
-use std::io::{Read, BufReader};
+use std::io::{Read};
 use std::path::{PathBuf, Path};
 use std::cmp::Ordering;
 use serde_derive::{Serialize};
@@ -14,6 +14,8 @@ use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
 use std::io::{Error, ErrorKind};
 use nohash_hasher::IntMap;
+
+const BLOCK_SIZE: usize = 4096;
 
 #[derive(PartialEq)]
 enum HashMode{
@@ -77,12 +79,15 @@ impl Fileinfo{
             .next()
             .expect("Cannot read file path from struct")
             ) {
-            Ok(f) => {
-                let mut buffer_reader = BufReader::new(f);
-                let mut hash_buffer = [0;4096];
+            Ok(mut f) => {
+                /* We want a read call to be "large" for two reasons
+                1) Force filesystem read ahead behavior
+                2) Fewer system calls for a given file.
+                Currently 16KB  */
+                let mut hash_buffer = [0;BLOCK_SIZE * 4];
                 loop {
-                    match buffer_reader.read(&mut hash_buffer) {
-                        Ok(n) if n>0 => hasher.write(&hash_buffer[0..]),
+                    match f.read(&mut hash_buffer) {
+                        Ok(n) if n>0 => hasher.write(&hash_buffer),
                         Ok(n) if n==0 => break,
                         Err(_e) => {
                             return None
