@@ -28,7 +28,7 @@ enum ChannelPackage{
     Fail(PathBuf, std::io::Error),
 }
 
-/// Serializable struct containing entries for a specific file.
+/// Serializable struct containing entries for a specific file. These structs will identify individual files as a collection of paths and associated hash and length data.
 #[derive(Debug, Serialize)]
 pub struct Fileinfo{
     full_hash: Option<u128>,
@@ -38,24 +38,82 @@ pub struct Fileinfo{
 }
 
 impl Fileinfo{
-    pub fn new(hash: Option<u128>, partial_hash: Option<u128>, length: u64, path: PathBuf) -> Self{
-        Fileinfo{full_hash: hash, partial_hash: partial_hash, file_length: length, file_paths: vec![path]}
+    /// Creates a new Fileinfo collection struct.
+    ///
+    /// # Examples
+    /// ```
+    /// use std::path::Path;
+    /// use ddh::Fileinfo;
+    ///
+    /// Fileinfo::new(
+    ///         None,
+    ///         None,
+    ///         3,
+    ///         Path::new("./foo/bar.txt").to_path_buf()
+    ///         );
+    /// ```
+    pub fn new(full_hash: Option<u128>, partial_hash: Option<u128>, length: u64, path: PathBuf) -> Self{
+        Fileinfo{full_hash: full_hash, partial_hash: partial_hash, file_length: length, file_paths: vec![path]}
     }
+    /// Gets the length of the files in the current collection.
+    /// 
+    /// # Examples
+    /// ```
+    /// use std::path::Path;
+    /// use ddh::Fileinfo;
+    ///
+    /// let fi = Fileinfo::new(None, None, 3, Path::new("./foo/bar.txt").to_path_buf());
+    /// let len = fi.get_length();
+    /// assert_eq!(3, len);
+    /// ```
     pub fn get_length(&self) -> u64{
         self.file_length
     }
+    /// Gets the hash of the full file if available.
+    /// 
+    /// # Examples
+    /// ```
+    /// use std::path::Path;
+    /// use ddh::Fileinfo;
+    ///
+    /// let fi = Fileinfo::new(Some(123), None, 3, Path::new("./foo/bar.txt").to_path_buf());
+    /// let f_hash = fi.get_full_hash();
+    /// assert_eq!(Some(123), f_hash);
+    /// ```
     pub fn get_full_hash(&self) -> Option<u128>{
         self.full_hash
     }
     fn set_full_hash(&mut self, hash: Option<u128>) -> (){
         self.full_hash = hash
     }
-    fn set_partial_hash(&mut self, hash: Option<u128>) -> (){
-        self.partial_hash = hash
-    }
+    /// Gets the hash of the partially read file if available.
+    /// 
+    /// # Examples
+    /// ```
+    /// use std::path::Path;
+    /// use ddh::Fileinfo;
+    ///
+    /// let fi = Fileinfo::new(None, Some(123), 3, Path::new("./foo/bar.txt").to_path_buf());
+    /// let p_hash = fi.get_partial_hash();
+    /// assert_eq!(Some(123), p_hash);
+    /// ```
     pub fn get_partial_hash(&self) -> Option<u128>{
         self.partial_hash
     }
+    fn set_partial_hash(&mut self, hash: Option<u128>) -> (){
+        self.partial_hash = hash
+    }
+    /// Gets a candidate name. This will be the name of the first file inserted into the collection and so can vary.
+    /// 
+    /// # Examples
+    /// ```
+    /// use std::path::Path;
+    /// use ddh::Fileinfo;
+    ///
+    /// let fi = Fileinfo::new(None, None, 3, Path::new("./foo/bar.txt").to_path_buf());
+    /// let some_name = fi.get_candidate_name();
+    /// assert_eq!("bar.txt", some_name)
+    /// ```
     pub fn get_candidate_name(&self) -> &str{
         self.file_paths
         .iter()
@@ -67,6 +125,18 @@ impl Fileinfo{
         .next()
         .unwrap()
     }
+    /// Gets all paths in the current collection. This can be used to get the names of each file with the string `rsplit("/")` method.
+    /// 
+    /// # Examples
+    /// ```
+    /// use std::path::Path;
+    /// use ddh::Fileinfo;
+    ///
+    /// let fi = Fileinfo::new(None, None, 3, Path::new("./foo/bar.txt").to_path_buf());
+    /// let all_files = fi.get_paths();
+    /// assert_eq!(&vec![Path::new("./foo/bar.txt").to_path_buf()],
+    ///            all_files);
+    /// ```
     pub fn get_paths(&self) -> &Vec<PathBuf>{
         return &self.file_paths
     }
