@@ -217,10 +217,10 @@ impl Ord for Fileinfo{
 /// let directories = vec!["/home/jon", "/home/doe"];
 /// let (files, errors) = ddh::deduplicate_dirs(directories);
 /// ```
-pub fn deduplicate_dirs(search_dirs: Vec<&str>) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>){
+pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>){
     let (sender, receiver) = channel();
     search_dirs.par_iter().for_each_with(sender, |s, search_dir| {
-            traverse_and_spawn(Path::new(&search_dir), s.clone());
+            traverse_and_spawn(search_dir.as_ref(), s.clone());
     });
     let mut files_of_lengths: IntMap<u64, Vec<Fileinfo>> = IntMap::default();
     let mut errors = Vec::new();
