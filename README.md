@@ -16,7 +16,7 @@ This tool is called DDH for two very good reasons.
 DDH is usable both as a library and as a stand alone CLI tool and aims to be simple to use in both cases.
 
 ## Library example
-```
+```rust
 let (files, errors): (Vec<Fileinfo>, Vec<(_, _)>) = ddh::deduplicate_dirs(dirs);
 let (shared, unique): (Vec<&Fileinfo>, Vec<&Fileinfo>) = files
                     .par_iter()
