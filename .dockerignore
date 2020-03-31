@@ -1,0 +1,9 @@
+.git
+
+*.lock
+target/
+Results.txt
+.DS_Store
+
+.github
+*.yml
