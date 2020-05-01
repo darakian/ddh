@@ -1,10 +1,10 @@
 [package]
 name = "ddh"
-version = "0.10.9"
+version = "0.11.0"
 authors = ["Jon Moroney <jmoroney@hawaii.edu>"]
 edition = "2018"
 description = "Compare and contrast directories"
-license = "MIT"
+license = "LGPL 3.0"
 homepage = "https://github.com/darakian/ddh"
 repository = "https://github.com/darakian/ddh"
 documentation = "https://docs.rs/ddh"
