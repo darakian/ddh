@@ -56,7 +56,7 @@ impl Fileinfo{
         Fileinfo{full_hash: full_hash, partial_hash: partial_hash, file_length: length, file_paths: vec![path]}
     }
     /// Gets the length of the files in the current collection.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -70,7 +70,7 @@ impl Fileinfo{
         self.file_length
     }
     /// Gets the hash of the full file if available.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -87,7 +87,7 @@ impl Fileinfo{
         self.full_hash = hash
     }
     /// Gets the hash of the partially read file if available.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -104,7 +104,7 @@ impl Fileinfo{
         self.partial_hash = hash
     }
     /// Gets a candidate name. This will be the name of the first file inserted into the collection and so can vary.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -126,7 +126,7 @@ impl Fileinfo{
         .unwrap()
     }
     /// Gets all paths in the current collection. This can be used to get the names of each file with the string `rsplit("/")` method.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -245,7 +245,7 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    let current_path_metadata = match fs::metadata(current_path) {
+    let current_path_metadata = match fs::symlink_metadata(current_path) {
         Err(e) =>{
             sender.send(
             ChannelPackage::Fail(current_path.to_path_buf(), e)
@@ -282,11 +282,8 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                     .map(|x| x.unwrap())
                     .collect();
                     let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x|
-                        x.path()
-                        .as_path()
-                        .symlink_metadata()
-                        .expect("Error reading Symlink Metadata")
-                        .file_type()
+                        x.file_type()
+                        .expect("Error reading DirEntry file type")
                         .is_file()
                         );
                     files.par_iter().for_each_with(sender.clone(), |sender, x|
@@ -300,7 +297,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                             );
                     dirs.into_par_iter()
                     .for_each_with(sender, |sender, x| {
-                            traverse_and_spawn(x.path().as_path(), sender.clone());
+                        traverse_and_spawn(x.path().as_path(), sender.clone());
                     })
                 },
                 Err(e) => {
