@@ -2,6 +2,8 @@
 //!
 //! `ddh` is a collection of functions and structs to aid in analysing filesystem directories.
 
+pub mod utils;
+
 use std::hash::{Hasher};
 use std::fs::{self, DirEntry};
 use std::io::{Read};
@@ -56,7 +58,7 @@ impl Fileinfo{
         Fileinfo{full_hash: full_hash, partial_hash: partial_hash, file_length: length, file_paths: vec![path]}
     }
     /// Gets the length of the files in the current collection.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -70,7 +72,7 @@ impl Fileinfo{
         self.file_length
     }
     /// Gets the hash of the full file if available.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -87,7 +89,7 @@ impl Fileinfo{
         self.full_hash = hash
     }
     /// Gets the hash of the partially read file if available.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -104,7 +106,7 @@ impl Fileinfo{
         self.partial_hash = hash
     }
     /// Gets a candidate name. This will be the name of the first file inserted into the collection and so can vary.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
@@ -126,7 +128,7 @@ impl Fileinfo{
         .unwrap()
     }
     /// Gets all paths in the current collection. This can be used to get the names of each file with the string `rsplit("/")` method.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use std::path::Path;
