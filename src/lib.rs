@@ -247,7 +247,7 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    let current_path_metadata = match fs::metadata(current_path) {
+    let current_path_metadata = match fs::symlink_metadata(current_path) {
         Err(e) =>{
             sender.send(
             ChannelPackage::Fail(current_path.to_path_buf(), e)
@@ -284,11 +284,8 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                     .map(|x| x.unwrap())
                     .collect();
                     let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x|
-                        x.path()
-                        .as_path()
-                        .symlink_metadata()
-                        .expect("Error reading Symlink Metadata")
-                        .file_type()
+                        x.file_type()
+                        .expect("Error reading DirEntry file type")
                         .is_file()
                         );
                     files.par_iter().for_each_with(sender.clone(), |sender, x|
@@ -302,7 +299,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                             );
                     dirs.into_par_iter()
                     .for_each_with(sender, |sender, x| {
-                            traverse_and_spawn(x.path().as_path(), sender.clone());
+                        traverse_and_spawn(x.path().as_path(), sender.clone());
                     })
                 },
                 Err(e) => {
