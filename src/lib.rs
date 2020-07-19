@@ -53,14 +53,14 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
     (complete_files, errors)
 }
 
-fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    let can_path = current_path.canonicalize().expect("Error canonicalizing path");
-    let current_path = can_path.as_path();
+fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) -> (){
+    let current_path = fs::canonicalize(current_path)
+        .expect("Error canonicalizing path");
     println!("Processing {:?}.\n Metadata {:?}",
         current_path,
         current_path.metadata().expect("Error unwrapping metadata")
     );
-    let current_path_metadata = match fs::symlink_metadata(current_path) {
+    let current_path_metadata = match fs::symlink_metadata(&current_path) {
         Err(e) =>{
             sender.send(
             ChannelPackage::Fail(current_path.to_path_buf(), e)
@@ -89,7 +89,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
     }
 
     if current_path_metadata.file_type().is_dir(){
-        match fs::read_dir(current_path) {
+        match fs::read_dir(&current_path) {
                 Ok(read_dir_results) => {
                     let good_entries: Vec<_> = read_dir_results
                     .filter(|x| x.is_ok())
@@ -104,7 +104,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                         traverse_and_spawn(&x.path(), sender.clone()));
                     dirs.into_par_iter()
                     .for_each_with(sender, |sender, x| {
-                        traverse_and_spawn(x.path().as_path(), sender.clone());
+                        traverse_and_spawn(x.path(), sender.clone());
                     })
                 },
                 Err(e) => {
