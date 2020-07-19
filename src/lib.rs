@@ -54,6 +54,8 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
+    let can_path = current_path.canonicalize().expect("Error canonicalizing path");
+    let current_path = can_path.as_path();
     println!("Processing {:?}.\n Metadata {:?}",
         current_path,
         current_path.metadata().expect("Error unwrapping metadata")
