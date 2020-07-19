@@ -54,9 +54,9 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    println!("Processing {:?}.\ Metadata {:?}",
+    println!("Processing {:?}.\n Metadata {:?}",
         current_path,
-        current_path.metadata.expect("Error unwrapping metadata")
+        current_path.metadata().expect("Error unwrapping metadata")
     );
     let current_path_metadata = match fs::symlink_metadata(current_path) {
         Err(e) =>{
