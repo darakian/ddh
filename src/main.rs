@@ -35,25 +35,15 @@ fn main() {
             println!("Directory Difference hTool\n{}\n{}\n{}",
             env!("CARGO_PKG_VERSION"),
             env!("CARGO_PKG_AUTHORS"),
-            args::example,
-        );
+            args::example,);
         },
         false => {}
     }
 
-    // help: bool,
-    // verbosity: Option<verbosity>,
-    // blocksize: Option<blocksize>,
-    // output: Option<String>,
-    // format: Option<format>,
-    // dirs: Vec<String>,
-
     let search_dirs: Vec<_> = args.dirs;
 
-
-    //let (sender, receiver) = channel();
-    let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
-    .collect();
+    // let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
+    // .collect();
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) = ddh::deduplicate_dirs(search_dirs);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.get_paths().len()>1);
