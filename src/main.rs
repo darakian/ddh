@@ -1,7 +1,8 @@
+mod args;
+
 use std::io::{stdin};
 use std::fs::{self};
 use std::io::prelude::*;
-use clap::{Arg, App};
 use rayon::prelude::*;
 use ddh::{Fileinfo};
 use std::path::{PathBuf};
@@ -20,48 +21,35 @@ pub enum Verbosity{
 }
 
 fn main() {
-    let arguments = App::new("Directory Difference hTool")
-                        .version(env!("CARGO_PKG_VERSION"))
-                        .author(env!("CARGO_PKG_AUTHORS"))
-                        .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
-                        .arg(Arg::with_name("directories")
-                               .short("d")
-                               .long("directories")
-                               .value_name("Directories")
-                               .help("Directories to parse")
-                               .min_values(1)
-                               .required(true)
-                               .takes_value(true)
-                               .index(1))
-                        .arg(Arg::with_name("Blocksize")
-                               .short("bs")
-                               .long("blocksize")
-                               .case_insensitive(true)
-                               .takes_value(true)
-                               .max_values(1)
-                               .possible_values(&["B", "K", "M", "G"])
-                               .help("Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is Kilobytes."))
-                        .arg(Arg::with_name("Verbosity")
-                                .short("v")
-                                .long("verbosity")
-                                .possible_values(&["quiet", "duplicates", "all"])
-                                .case_insensitive(true)
-                                .takes_value(true)
-                                .help("Sets verbosity for printed output."))
-                        .arg(Arg::with_name("Output")
-                                .short("o")
-                                .long("output")
-                                .takes_value(true)
-                                .max_values(1)
-                                .help("Sets file to save all output. Use 'no' for no file output."))
-                        .arg(Arg::with_name("Format")
-                                .short("f")
-                                .long("format")
-                                .possible_values(&["standard", "json", "off"])
-                                .takes_value(true)
-                                .max_values(1)
-                                .help("Sets output format."))
-                        .get_matches();
+    let mut args = pico_args::Arguments::from_env();
+    let args = args::Args {
+        help: args.contains(["-h", "--help"]),
+        verbosity: args.opt_value_from_str(["-v", "--verbosity"]).unwrap_or(None),
+        blocksize: args.opt_value_from_str(["-bs", "--blocksize"]).unwrap_or(None),
+        output: args.opt_value_from_str(["-o", "--output"]).unwrap_or(None),
+        format: args.opt_value_from_str(["-f", "--format"]).unwrap_or(None),
+        dirs: args.opt_value_from_str(["-d", "--directories"]),
+    };
+    match args.help {
+        true => {
+            println!("Directory Difference hTool\n{}\n{}\n{}",
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_AUTHORS"),
+            args::example,
+        );
+        },
+        false => {}
+    }
+
+    // help: bool,
+    // verbosity: Option<verbosity>,
+    // blocksize: Option<blocksize>,
+    // output: Option<String>,
+    // format: Option<format>,
+    // dirs: Vec<String>,
+
+    let search_dirs: Vec<_> = args.dirs;
+
 
     //let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap()
