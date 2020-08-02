@@ -3,7 +3,7 @@ use std::fs::{self};
 use std::io::prelude::*;
 use clap::{Arg, App};
 use rayon::prelude::*;
-use ddh::{Fileinfo};
+use ddh::fileinfo::{Fileinfo};
 use std::path::{PathBuf};
 
 #[derive(Debug, Copy, Clone)]
