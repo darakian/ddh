@@ -9,7 +9,7 @@ use std::fs::{self, DirEntry};
 use std::io::{Read};
 use std::path::{PathBuf, Path};
 use std::cmp::Ordering;
-use serde_derive::{Serialize};
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 use siphasher::sip128::Hasher128;
 use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
@@ -31,7 +31,7 @@ enum ChannelPackage{
 }
 
 /// Serializable struct containing entries for a specific file. These structs will identify individual files as a collection of paths and associated hash and length data.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Fileinfo{
     full_hash: Option<u128>,
     partial_hash: Option<u128>,
@@ -176,6 +176,20 @@ impl Fileinfo{
                 return None
             }
         }
+    }
+}
+
+impl Serialize for Fileinfo{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Fileinfo", 4)?;
+        state.serialize_field("partial_hash", &self.partial_hash)?;
+        state.serialize_field("full_hash", &self.full_hash)?;
+        state.serialize_field("file_length", &self.file_length)?;
+        state.serialize_field("file_paths", &self.file_paths)?;
+        state.end()
     }
 }
 
