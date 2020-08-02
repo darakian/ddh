@@ -28,7 +28,7 @@ fn main() {
         blocksize: args.opt_value_from_str(["-bs", "--blocksize"]).unwrap_or(None),
         output: args.opt_value_from_str(["-o", "--output"]).unwrap_or(None),
         format: args.opt_value_from_str(["-f", "--format"]).unwrap_or(None),
-        dirs: args.opt_value_from_str(["-d", "--directories"]),
+        dirs: args.values_from_str(["-d", "--directories"]).unwrap_or(vec![]),
     };
     match args.help {
         true => {
@@ -39,6 +39,7 @@ fn main() {
         },
         false => {}
     }
+    println!("Dirs: {:?}", args.dirs);
 
     let search_dirs: Vec<_> = args.dirs;
 
@@ -47,22 +48,15 @@ fn main() {
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) = ddh::deduplicate_dirs(search_dirs);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files.par_iter().partition(|&x| x.get_paths().len()>1);
-    process_full_output(&shared_files, &unique_files, &complete_files, &read_errors, &arguments);
+    //process_full_output(&shared_files, &unique_files, &complete_files, &read_errors, &arguments);
 }
 
-fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, error_paths: &Vec<(PathBuf, std::io::Error)>, arguments: &clap::ArgMatches) ->(){
-    let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
+fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, error_paths: &Vec<(PathBuf, std::io::Error)>, arguments: args::Args) ->(){
+    let blocksize = match arguments.blocksize.unwrap_or(args::Blocksize::Mega){args::Blocksize::Byte => "Bytes", args::Blocksize::Kilo => "Kilobytes", args::Blocksize::Mega => "Megabytes", args::Blocksize::Giga => "Gigabytes", _ => "Megabytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 2};
     let display_divisor =  1024u64.pow(display_power);
-    let fmt = match arguments.value_of("Format").unwrap_or(""){
-        "standard" => PrintFmt::Standard,
-        "json" => PrintFmt::Json,
-        _ => PrintFmt::Standard};
-    let verbosity = match arguments.value_of("Verbosity").unwrap_or(""){
-        "quiet" => Verbosity::Quiet,
-        "duplicates" => Verbosity::Duplicates,
-        "all" => Verbosity::All,
-        _ => Verbosity::Quiet};
+    let fmt = arguments.format.unwrap_or(args::Format::Standard);
+    let verbosity = arguments.verbosity.unwrap_or(args::Verbosity::Quiet);
 
     println!("{} Total files (with duplicates): {} {}", complete_files.par_iter()
     .map(|x| x.get_paths().len() as u64)
@@ -86,14 +80,14 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     .map(|x| x.get_paths().len() as u64)
     .sum::<u64>());
 
-    match (fmt, verbosity) {
-        (_, Verbosity::Quiet) => {},
-        (PrintFmt::Standard, Verbosity::Duplicates) => {
+    match (&fmt, verbosity) {
+        (_, args::Verbosity::Quiet) => {},
+        (args::Format::Standard, args::Verbosity::Duplicates) => {
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
             println!("instances of {} with file length {}:", x.get_candidate_name(), x.get_length());
             x.get_paths().par_iter().for_each(|y| println!("\t{}", y.canonicalize().unwrap().to_str().unwrap()));})
         },
-        (PrintFmt::Standard, Verbosity::All) => {
+        (args::Format::Standard, args::Verbosity::All) => {
             println!("Single instance files"); unique_files.par_iter()
             .for_each(|x| println!("{}", x.get_paths().iter().next().unwrap().canonicalize().unwrap().to_str().unwrap()));
             println!("Shared instance files and instance locations"); shared_files.iter().for_each(|x| {
@@ -103,29 +97,29 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                 println!("Could not process {:#?} due to error {:#?}", x.0, x.1.kind());
             })
         },
-        (PrintFmt::Json, Verbosity::Duplicates) => {
+        (args::Format::Json, args::Verbosity::Duplicates) => {
             println!("{}", serde_json::to_string(shared_files).unwrap_or("".to_string()));
         },
-        (PrintFmt::Json, Verbosity::All) => {
+        (args::Format::Json, args::Verbosity::All) => {
             println!("{}", serde_json::to_string(complete_files).unwrap_or("".to_string()));
         },
         _ => {},
     }
 
-    match arguments.value_of("Output").unwrap_or("Results.txt"){
-        "no" => {},
-        destination_string => {
-            match fs::File::open(destination_string) {
+    match arguments.output{
+        None => {},
+        Some(destination_string) => {
+            match fs::File::open(&destination_string) {
                     Ok(_f) => {
                     println!("---");
-                    println!("File {} already exists.", destination_string);
+                    println!("File {} already exists.", &destination_string);
                     println!("Overwrite? Y/N");
                     let mut input = String::new();
                     match stdin().read_line(&mut input) {
                         Ok(_n) => {
                             match input.chars().next().unwrap_or(' ') {
                                 'n' | 'N' => {println!("Exiting."); return;}
-                                'y' | 'Y' => {println!("Over writing {}", destination_string);}
+                                'y' | 'Y' => {println!("Over writing {}", &destination_string);}
                                 _ => {println!("Exiting."); return;}
                             }
                         }
@@ -133,24 +127,24 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
                     }
                 },
                 Err(_e) => {
-                    match fs::File::create(destination_string) {
+                    match fs::File::create(&destination_string) {
                         Ok(_f) => {},
                         Err(_e) => {
-                            println!("Error encountered opening file {}. Err: {}", destination_string, _e);
+                            println!("Error encountered opening file {}. Err: {}", &destination_string, _e);
                             println!("Exiting."); return;
                         }
                     }
                 },
             }
-            write_results_to_file(fmt, &shared_files, &unique_files, &complete_files, destination_string);
+            write_results_to_file(&fmt, &shared_files, &unique_files, &complete_files, &destination_string);
         },
     }
 }
 
-fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, file: &str) {
+fn write_results_to_file(fmt: &args::Format, shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, file: &str) {
     let mut output = fs::File::create(file).expect("Error opening output file for writing");
     match fmt {
-        PrintFmt::Standard => {
+        args::Format::Standard => {
             output.write_fmt(format_args!("Duplicates:\n")).unwrap();
             for file in shared_files.into_iter(){
                 let title = file.get_paths().get(0).unwrap().file_name().unwrap().to_str().unwrap();
@@ -168,10 +162,10 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
                 }
             }
         },
-        PrintFmt::Json => {
+        args::Format::Json => {
             output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
         },
-        PrintFmt::Off =>{return},
+        args::Format::None =>{return},
     }
-    println!("{:#?} results written to {}", fmt, file);
+    println!("Results written to {}", file);
 }
