@@ -32,7 +32,7 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
     });
     let mut files_of_lengths: IntMap<u64, Vec<Fileinfo>> = IntMap::default();
     let mut errors = Vec::new();
-    for pkg in receiver.iter(){
+    receiver.iter().for_each(|pkg| {
         match pkg{
             ChannelPackage::Success(entry) => {
                 match files_of_lengths.entry(entry.get_length()) {
@@ -44,7 +44,8 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
                 errors.push((entry, error));
             },
         }
-    }
+
+    });
     let complete_files: Vec<Fileinfo> = files_of_lengths.into_par_iter()
         .map(|x| differentiate_and_consolidate(x.0, x.1))
         .flatten()
@@ -138,12 +139,12 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 return dedupe(files)
             }
             let mut partial_hashes: HashMap<Option<u128>, u64> = HashMap::new();
-            for file in files.iter(){
-                match partial_hashes.entry(file.get_partial_hash()){
+            files.iter().for_each(|f| {
+                match partial_hashes.entry(f.get_partial_hash()){
                     Entry::Vacant(e) => { e.insert(0); },
                     Entry::Occupied(mut e) => {*e.get_mut()+=1;}
                 }
-            }
+            });
             let dedupe_hashes: Vec<_> = partial_hashes
                 .into_iter()
                 .filter(|x| x.1>0)
@@ -163,7 +164,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
 
 fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
     let mut cache: HashMap<(Option<u128>, Option<u128>), &mut Fileinfo> = HashMap::new();
-    for file in files.iter_mut(){
+    files.iter_mut().for_each(|file| {
         match cache.entry((file.get_partial_hash(), file.get_full_hash())){
                     Entry::Vacant(e) => {
                         e.insert(file);
@@ -174,7 +175,7 @@ fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
                         .append(&mut file.file_paths);
                     }
                 }
-    }
+    });
     files.retain(|x| x.get_paths().len()>0);
     files
 }
