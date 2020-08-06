@@ -76,7 +76,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
             Fileinfo::new(
                 None,
                 None,
-                current_path.metadata().expect("Error reading path length").len(),
+                current_path.metadata().expect("Error reading file metadata"),
                 current_path.to_path_buf()
                 ))
             ).expect("Error sending new ChannelPackage::Success");
@@ -100,7 +100,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                             Fileinfo::new(
                                 None,
                                 None,
-                                x.metadata().expect("Error reading path length").len(),
+                                current_path.metadata().expect("Error reading file metadata"),
                                 x.path()))
                                 ).expect("Error sending new ChannelPackage::Success")
                             );
