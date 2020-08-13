@@ -3,7 +3,7 @@ use std::fs::{self};
 use std::io::prelude::*;
 use clap::{Arg, App};
 use rayon::prelude::*;
-use ddh::{Fileinfo};
+use ddh::fileinfo::{Fileinfo};
 use std::path::{PathBuf};
 
 #[derive(Debug, Copy, Clone)]
@@ -175,7 +175,7 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
         PrintFmt::Standard => {
             output.write_fmt(format_args!("Duplicates:\n")).unwrap();
             for file in shared_files.into_iter(){
-                let title = file.get_paths().get(0).unwrap().file_name().unwrap().to_str().unwrap();
+                let title = file.get_candidate_name();
                 output.write_fmt(format_args!("{}\n", title)).unwrap();
                 for entry in file.get_paths().iter(){
                     output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
@@ -183,7 +183,7 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
             }
             output.write_fmt(format_args!("Singletons:\n")).unwrap();
             for file in unique_files.into_iter(){
-                let title = file.get_paths().get(0).unwrap().file_name().unwrap().to_str().unwrap();
+                let title = file.get_candidate_name();
                 output.write_fmt(format_args!("{}\n", title)).unwrap();
                 for entry in file.get_paths().iter(){
                     output.write_fmt(format_args!("\t{}\n", entry.as_path().to_str().unwrap())).unwrap();
