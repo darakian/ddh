@@ -4,6 +4,8 @@
 
 pub mod fileinfo;
 use fileinfo::{Fileinfo, HashMode};
+pub mod utils;
+use utils::ChunkIter;
 
 use std::fs::{self, DirEntry};
 use std::path::{PathBuf, Path};
@@ -12,6 +14,8 @@ use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
 use std::io::{Error, ErrorKind};
 use nohash_hasher::IntMap;
+use std::hash::Hasher;
+use siphasher::sip128::Hasher128;
 
 enum ChannelPackage{
     Success(Fileinfo),
@@ -51,6 +55,26 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
         .flatten()
         .collect();
     (complete_files, errors)
+}
+
+/// Constructs a vector of unique data chunks.
+///
+/// # Examples
+/// ```
+/// let paths = vec!["/home/jon/file1", "/home/jon/file2"];
+/// let (chunks, errors) = ddh::deconstruct(paths);
+/// ```
+pub fn deconstruct<P: AsRef<Path> + Sync>(files: Vec<P>, chunk_size: usize) -> () {
+    files.par_iter().
+        map(|x| {
+            let citer = ChunkIter::new(x, chunk_size);
+            citer.iter()
+            .map(|y| {
+                let mut hasher = siphasher::sip128::SipHasher::new();
+                hasher.write(y);
+                (hasher.finish128().into(), y)
+            }).collect()}
+        ).collect()
 }
 
 fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
