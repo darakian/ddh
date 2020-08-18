@@ -96,14 +96,7 @@ fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> ()
                         .is_file()
                         );
                     files.par_iter().for_each_with(sender.clone(), |sender, x|
-                        sender.send(ChannelPackage::Success(
-                            Fileinfo::new(
-                                None,
-                                None,
-                                current_path.metadata().expect("Error reading file metadata"),
-                                x.path()))
-                                ).expect("Error sending new ChannelPackage::Success")
-                            );
+                        traverse_and_spawn(&x.path(), sender.clone()));
                     dirs.into_par_iter()
                     .for_each_with(sender, |sender, x| {
                         traverse_and_spawn(x.path().as_path(), sender.clone());
