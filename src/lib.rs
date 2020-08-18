@@ -54,8 +54,15 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
 }
 
 fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) -> (){
-    let current_path = fs::canonicalize(current_path)
-        .expect("Error canonicalizing path");
+    let current_path = match fs::canonicalize(&current_path) {
+        Err(e) => {
+            sender.send(
+            ChannelPackage::Fail(current_path.as_ref().to_path_buf(), e)
+            ).expect("Error sending new ChannelPackage::Fail");
+            return
+        },
+        Ok(can_path) => can_path,
+    };
     let current_path_metadata = match fs::symlink_metadata(&current_path) {
         Err(e) =>{
             sender.send(
