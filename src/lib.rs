@@ -54,6 +54,15 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
 }
 
 fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) -> (){
+    let current_path_metadata = match fs::symlink_metadata(&current_path) {
+        Err(e) =>{
+            sender.send(
+            ChannelPackage::Fail(current_path.as_ref().to_path_buf(), e)
+            ).expect("Error sending new ChannelPackage::Fail");
+            return
+        },
+        Ok(meta) => meta,
+    };
     let current_path = match fs::canonicalize(&current_path) {
         Err(e) => {
             sender.send(
@@ -61,17 +70,11 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
             ).expect("Error sending new ChannelPackage::Fail");
             return
         },
-        Ok(can_path) => can_path,
+        Ok(canonical_path) => canonical_path,
     };
-    let current_path_metadata = match fs::symlink_metadata(&current_path) {
-        Err(e) =>{
-            sender.send(
-            ChannelPackage::Fail(current_path.to_path_buf(), e)
-            ).expect("Error sending new ChannelPackage::Fail");
-            return
-        },
-        Ok(meta) => meta,
-    };
+    if !current_path_metadata.file_type().is_file() && !current_path_metadata.file_type().is_dir(){
+        println!("Operating on \n{:?}\n{:?}", current_path, current_path_metadata);
+    }
     if current_path_metadata.file_type().is_symlink(){
         sender.send(
         ChannelPackage::Fail(current_path.to_path_buf(), Error::new(ErrorKind::Other, "Path is symlink"))
