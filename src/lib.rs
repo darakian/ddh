@@ -10,7 +10,6 @@ use std::path::{PathBuf, Path};
 use rayon::prelude::*;
 use std::sync::mpsc::{Sender, channel};
 use std::collections::hash_map::{HashMap, Entry};
-use std::io::{Error, ErrorKind};
 use nohash_hasher::IntMap;
 
 enum ChannelPackage{
@@ -53,62 +52,64 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
     (complete_files, errors)
 }
 
-fn traverse_and_spawn(current_path: &Path, sender: Sender<ChannelPackage>) -> (){
-    let current_path_metadata = match fs::symlink_metadata(current_path) {
+fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) -> (){
+    let current_path_metadata = match fs::symlink_metadata(&current_path) {
         Err(e) =>{
             sender.send(
-            ChannelPackage::Fail(current_path.to_path_buf(), e)
+            ChannelPackage::Fail(current_path.as_ref().to_path_buf(), e)
             ).expect("Error sending new ChannelPackage::Fail");
             return
         },
         Ok(meta) => meta,
     };
-
-    if current_path_metadata.file_type().is_symlink(){
-        sender.send(
-        ChannelPackage::Fail(current_path.to_path_buf(), Error::new(ErrorKind::Other, "Path is symlink"))
-        ).expect("Error sending new ChannelPackage::Fail");
-        return
-    }
-
-    if current_path_metadata.file_type().is_file(){
+    let current_path = match fs::canonicalize(&current_path) {
+        Err(e) => {
+            sender.send(
+            ChannelPackage::Fail(current_path.as_ref().to_path_buf(), e)
+            ).expect("Error sending new ChannelPackage::Fail");
+            return
+        },
+        Ok(canonical_path) => canonical_path,
+    };
+    match current_path_metadata{
+        meta if meta.is_file() => {
             sender.send(ChannelPackage::Success(
             Fileinfo::new(
                 None,
                 None,
-                current_path.metadata().expect("Error reading file metadata"),
+                meta,
                 current_path.to_path_buf()
                 ))
             ).expect("Error sending new ChannelPackage::Success");
-        return
+        },
+        meta if meta.is_dir() => {
+            match fs::read_dir(&current_path) {
+                    Ok(read_dir_results) => {
+                        let good_entries: Vec<_> = read_dir_results
+                        .filter(|x| x.is_ok())
+                        .map(|x| x.unwrap())
+                        .collect();
+                        let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x|
+                            x.file_type()
+                            .expect("Error reading DirEntry file type")
+                            .is_file()
+                            );
+                        files.par_iter().for_each_with(sender.clone(), |sender, x|
+                            traverse_and_spawn(&x.path(), sender.clone()));
+                        dirs.into_par_iter()
+                        .for_each_with(sender, |sender, x| {
+                            traverse_and_spawn(x.path().as_path(), sender.clone());
+                        })
+                    },
+                    Err(e) => {
+                        sender.send(
+                            ChannelPackage::Fail(current_path.to_path_buf(), e)
+                            ).expect("Error sending new ChannelPackage::Fail");
+                        },
+                }
+            },
+        _ => {/*Symlinks not yet handled*/},
     }
-
-    if current_path_metadata.file_type().is_dir(){
-        match fs::read_dir(current_path) {
-                Ok(read_dir_results) => {
-                    let good_entries: Vec<_> = read_dir_results
-                    .filter(|x| x.is_ok())
-                    .map(|x| x.unwrap())
-                    .collect();
-                    let (files, dirs): (Vec<&DirEntry>, Vec<&DirEntry>) = good_entries.par_iter().partition(|&x|
-                        x.file_type()
-                        .expect("Error reading DirEntry file type")
-                        .is_file()
-                        );
-                    files.par_iter().for_each_with(sender.clone(), |sender, x|
-                        traverse_and_spawn(&x.path(), sender.clone()));
-                    dirs.into_par_iter()
-                    .for_each_with(sender, |sender, x| {
-                        traverse_and_spawn(x.path().as_path(), sender.clone());
-                    })
-                },
-                Err(e) => {
-                    sender.send(
-                        ChannelPackage::Fail(current_path.to_path_buf(), e)
-                        ).expect("Error sending new ChannelPackage::Fail");
-                },
-            }
-    } else {}
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
