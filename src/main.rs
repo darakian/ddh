@@ -72,7 +72,7 @@ fn main() {
     process_full_output(&shared_files, &unique_files, &complete_files, &read_errors, &arguments);
 }
 
-fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, error_paths: &Vec<(PathBuf, std::io::Error)>, arguments: &clap::ArgMatches) ->(){
+fn process_full_output(shared_files: &[&Fileinfo], unique_files: &[&Fileinfo], complete_files: &[Fileinfo], error_paths: &[(PathBuf, std::io::Error)], arguments: &clap::ArgMatches) {
     let blocksize = match arguments.value_of("Blocksize").unwrap_or(""){"B" => "Bytes", "K" => "Kilobytes", "M" => "Megabytes", "G" => "Gigabytes", _ => "Megabytes"};
     let display_power = match blocksize{"Bytes" => 0, "Kilobytes" => 1, "Megabytes" => 2, "Gigabytes" => 3, _ => 2};
     let display_divisor =  1024u64.pow(display_power);
@@ -126,10 +126,10 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
             })
         },
         (PrintFmt::Json, Verbosity::Duplicates) => {
-            println!("{}", serde_json::to_string(shared_files).unwrap_or("".to_string()));
+            println!("{}", serde_json::to_string(shared_files).unwrap_or_else(|_| "".to_string()));
         },
         (PrintFmt::Json, Verbosity::All) => {
-            println!("{}", serde_json::to_string(complete_files).unwrap_or("".to_string()));
+            println!("{}", serde_json::to_string(complete_files).unwrap_or_else(|_| "".to_string()));
         },
         _ => {},
     }
@@ -169,12 +169,12 @@ fn process_full_output(shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Filein
     }
 }
 
-fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_files: &Vec<&Fileinfo>, complete_files: &Vec<Fileinfo>, file: &str) {
+fn write_results_to_file(fmt: PrintFmt, shared_files: &[&Fileinfo], unique_files: &[&Fileinfo], complete_files: &[Fileinfo], file: &str) {
     let mut output = fs::File::create(file).expect("Error opening output file for writing");
     match fmt {
         PrintFmt::Standard => {
             output.write_fmt(format_args!("Duplicates:\n")).unwrap();
-            for file in shared_files.into_iter(){
+            for file in shared_files.iter(){
                 let title = file.get_candidate_name();
                 output.write_fmt(format_args!("{}\n", title)).unwrap();
                 for entry in file.get_paths().iter(){
@@ -182,7 +182,7 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
                 }
             }
             output.write_fmt(format_args!("Singletons:\n")).unwrap();
-            for file in unique_files.into_iter(){
+            for file in unique_files.iter(){
                 let title = file.get_candidate_name();
                 output.write_fmt(format_args!("{}\n", title)).unwrap();
                 for entry in file.get_paths().iter(){
@@ -191,7 +191,7 @@ fn write_results_to_file(fmt: PrintFmt, shared_files: &Vec<&Fileinfo>, unique_fi
             }
         },
         PrintFmt::Json => {
-            output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or("Error deserializing".to_string()))).unwrap();
+            output.write_fmt(format_args!("{}", serde_json::to_string(complete_files).unwrap_or_else(|_| "Error deserializing".to_string()))).unwrap();
         },
         PrintFmt::Off =>{return},
     }

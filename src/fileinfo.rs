@@ -42,8 +42,8 @@ impl Fileinfo{
     /// Ok(())
     /// }
     /// ```
-    pub fn new(full_hash: Option<u128>, partial_hash: Option<u128>, meta: Metadata, path: PathBuf) -> Self{
-        Fileinfo{full_hash: full_hash, partial_hash: partial_hash, metadata: meta, file_paths: vec![path]}
+    pub fn new(full: Option<u128>, partial: Option<u128>, meta: Metadata, path: PathBuf) -> Self{
+        Fileinfo{full_hash: full, partial_hash: partial, metadata: meta, file_paths: vec![path]}
     }
     /// Gets the length of the files in the current collection.
     ///
@@ -81,7 +81,7 @@ impl Fileinfo{
     pub fn get_full_hash(&self) -> Option<u128>{
         self.full_hash
     }
-    pub(crate) fn set_full_hash(&mut self, hash: Option<u128>) -> (){
+    pub(crate) fn set_full_hash(&mut self, hash: Option<u128>) {
         self.full_hash = hash
     }
     /// Gets the hash of the partially read file if available.
@@ -102,7 +102,7 @@ impl Fileinfo{
     pub fn get_partial_hash(&self) -> Option<u128>{
         self.partial_hash
     }
-    pub(crate) fn set_partial_hash(&mut self, hash: Option<u128>) -> (){
+    pub(crate) fn set_partial_hash(&mut self, hash: Option<u128>) {
         self.partial_hash = hash
     }
     /// Gets a candidate name. This will be the name of the first file inserted into the collection and so can vary.
@@ -122,12 +122,11 @@ impl Fileinfo{
     /// ```
     pub fn get_candidate_name(&self) -> &str{
         self.file_paths
-        .iter()
-        .next()
+        .get(0)
         .unwrap()
         .to_str()
         .unwrap()
-        .rsplit("/")
+        .rsplit('/')
         .next()
         .unwrap()
     }
@@ -148,15 +147,14 @@ impl Fileinfo{
     /// }
     /// ```
     pub fn get_paths(&self) -> &Vec<PathBuf>{
-        return &self.file_paths
+        &self.file_paths
     }
 
     pub fn generate_hash(&mut self, mode: HashMode) -> Option<u128>{
         let mut hasher = siphasher::sip128::SipHasher::new();
         match fs::File::open(
             self.file_paths
-            .iter()
-            .next()
+            .get(0)
             .expect("Cannot read file path from struct")
             ) {
             Ok(mut f) => {
@@ -178,10 +176,10 @@ impl Fileinfo{
                         return Some(hasher.finish128().into());
                     }
                 }
-                return Some(hasher.finish128().into());
+                Some(hasher.finish128().into())
             }
             Err(_e) => {
-                return None
+                None
             }
         }
     }
