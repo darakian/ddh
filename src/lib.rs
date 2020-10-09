@@ -52,7 +52,7 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(search_dirs: Vec<P>) -> (Vec<File
     (complete_files, errors)
 }
 
-fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) -> (){
+fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) {
     let current_path_metadata = match fs::symlink_metadata(&current_path) {
         Err(e) =>{
             sender.send(
@@ -78,7 +78,7 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
                 None,
                 None,
                 meta,
-                current_path.to_path_buf()
+                current_path
                 ))
             ).expect("Error sending new ChannelPackage::Success");
         },
@@ -103,7 +103,7 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
                     },
                     Err(e) => {
                         sender.send(
-                            ChannelPackage::Fail(current_path.to_path_buf(), e)
+                            ChannelPackage::Fail(current_path, e)
                             ).expect("Error sending new ChannelPackage::Fail");
                         },
                 }
@@ -113,11 +113,8 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
 }
 
 fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
-    if file_length==0{
+    if file_length==0 || files.is_empty(){
         return files
-    }
-    if files.len()<=0{
-        panic!("Invalid length vector");
     }
     match files.len(){
         1 => return files,
@@ -170,6 +167,6 @@ fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo>{
                     }
                 }
     });
-    files.retain(|x| x.get_paths().len()>0);
+    files.retain(|x| !x.get_paths().is_empty());
     files
 }
