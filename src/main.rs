@@ -260,9 +260,9 @@ fn process_full_output(
             }
             write_results_to_file(
                 fmt,
-                &shared_files,
-                &unique_files,
-                &complete_files,
+                shared_files,
+                unique_files,
+                complete_files,
                 destination_string,
             );
         }
