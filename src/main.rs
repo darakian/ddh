@@ -62,6 +62,14 @@ fn main() {
                                 .takes_value(true)
                                 .max_values(1)
                                 .help("Sets output format."))
+                        .arg(Arg::new("Minimum")
+                                .short('m')
+                                .long("minimum")
+                                .takes_value(true)
+                                .max_values(1)
+                                .default_value("0")
+                                .validator(|s| s.parse::<u64>())
+                                .help("Minimum file size in bytes to consider."))
                         .get_matches();
 
     //let (sender, receiver) = channel();
