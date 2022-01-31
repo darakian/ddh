@@ -19,55 +19,65 @@ pub enum Verbosity {
     All,
 }
 
+static DDH_ABOUT: &str = "Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin";
+
 fn main() {
     let arguments = App::new("Directory Difference hTool")
                         .version(env!("CARGO_PKG_VERSION"))
                         .author(env!("CARGO_PKG_AUTHORS"))
-                        .about("Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin")
-                        .arg(Arg::with_name("directories")
-                               .short("d")
+                        .about(DDH_ABOUT)
+                        .arg(Arg::new("directories")
+                               .short('d')
                                .long("directories")
                                .value_name("Directories")
                                .help("Directories to parse")
                                .min_values(1)
                                .required(true)
-                               .takes_value(true)
-                               .index(1))
-                        .arg(Arg::with_name("Blocksize")
-                               .short("bs")
+                               .takes_value(true))
+                        .arg(Arg::new("Blocksize")
+                               .short('b')
                                .long("blocksize")
-                               .case_insensitive(true)
+                               .ignore_case(true)
                                .takes_value(true)
                                .max_values(1)
                                .possible_values(&["B", "K", "M", "G"])
                                .help("Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is Kilobytes."))
-                        .arg(Arg::with_name("Verbosity")
-                                .short("v")
+                        .arg(Arg::new("Verbosity")
+                                .short('v')
                                 .long("verbosity")
                                 .possible_values(&["quiet", "duplicates", "all"])
-                                .case_insensitive(true)
+                                .ignore_case(true)
                                 .takes_value(true)
                                 .help("Sets verbosity for printed output."))
-                        .arg(Arg::with_name("Output")
-                                .short("o")
+                        .arg(Arg::new("Output")
+                                .short('o')
                                 .long("output")
                                 .takes_value(true)
                                 .max_values(1)
                                 .help("Sets file to save all output. Use 'no' for no file output."))
-                        .arg(Arg::with_name("Format")
-                                .short("f")
+                        .arg(Arg::new("Format")
+                                .short('f')
                                 .long("format")
                                 .possible_values(&["standard", "json", "off"])
                                 .takes_value(true)
                                 .max_values(1)
                                 .help("Sets output format."))
+                        .arg(Arg::new("Minimum")
+                                .short('m')
+                                .long("minimum")
+                                .takes_value(true)
+                                .max_values(1)
+                                .default_value("0")
+                                .validator(|s| s.parse::<u64>())
+                                .help("Minimum file size in bytes to consider."))
                         .get_matches();
 
     //let (sender, receiver) = channel();
     let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().collect();
+    let min_size: u64 = arguments.value_of("Minimum").unwrap().parse::<u64>().unwrap_or(0);
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) =
-        ddh::deduplicate_dirs(search_dirs);
+        ddh::deduplicate_dirs_with_min(search_dirs, min_size);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files
         .par_iter()
         .partition(|&x| x.get_paths().len() > 1);

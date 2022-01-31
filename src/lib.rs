@@ -27,11 +27,16 @@ enum ChannelPackage {
 pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
     search_dirs: Vec<P>,
 ) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
+    deduplicate_dirs_with_min(search_dirs, 0)
+}
+
+pub fn deduplicate_dirs_with_min<P: AsRef<Path> + Sync>(
+    search_dirs: Vec<P>, min_size: u64) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
     let (sender, receiver) = channel();
     search_dirs
         .par_iter()
         .for_each_with(sender, |s, search_dir| {
-            traverse_and_spawn(search_dir.as_ref(), s.clone());
+            traverse_and_spawn(search_dir.as_ref(), s.clone(), min_size);
         });
     let mut files_of_lengths: IntMap<u64, Vec<Fileinfo>> = IntMap::default();
     let mut errors = Vec::new();
@@ -56,7 +61,7 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
     (complete_files, errors)
 }
 
-fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>) {
+fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>, min_size: u64) {
     let current_path_metadata = match fs::symlink_metadata(&current_path) {
         Err(e) => {
             sender
@@ -76,7 +81,7 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
         Ok(canonical_path) => canonical_path,
     };
     match current_path_metadata {
-        meta if meta.is_file() => {
+        meta if meta.is_file() && meta.len() >= min_size => {
             sender
                 .send(ChannelPackage::Success(Fileinfo::new(
                     None,
@@ -99,10 +104,10 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
                             .is_file()
                     });
                 files.par_iter().for_each_with(sender.clone(), |sender, x| {
-                    traverse_and_spawn(&x.path(), sender.clone())
+                    traverse_and_spawn(&x.path(), sender.clone(), min_size)
                 });
                 dirs.into_par_iter().for_each_with(sender, |sender, x| {
-                    traverse_and_spawn(x.path().as_path(), sender.clone());
+                    traverse_and_spawn(x.path().as_path(), sender.clone(), min_size);
                 })
             }
             Err(e) => {
