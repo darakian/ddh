@@ -24,19 +24,17 @@ enum ChannelPackage {
 /// let directories = vec!["/home/jon", "/home/doe"];
 /// let (files, errors) = ddh::deduplicate_dirs(directories);
 /// ```
-pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
-    search_dirs: Vec<P>,
-) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
-    deduplicate_dirs_with_min(search_dirs, 0)
-}
 
-pub fn deduplicate_dirs_with_min<P: AsRef<Path> + Sync>(
-    search_dirs: Vec<P>, min_size: u64) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
+pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
+    search_dirs: Vec<P>, 
+    ignore_dirs: Vec<P>, 
+    min_size: u64) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
     let (sender, receiver) = channel();
+    let ignore_paths = ignore_dirs.iter().map(|x| x.as_ref().canonicalize().unwrap()).collect();
     search_dirs
         .par_iter()
         .for_each_with(sender, |s, search_dir| {
-            traverse_and_spawn(search_dir.as_ref(), s.clone(), min_size);
+            traverse_and_spawn(search_dir.as_ref(), &ignore_paths, s.clone(), min_size);
         });
     let mut files_of_lengths: IntMap<u64, Vec<Fileinfo>> = IntMap::default();
     let mut errors = Vec::new();
@@ -61,7 +59,10 @@ pub fn deduplicate_dirs_with_min<P: AsRef<Path> + Sync>(
     (complete_files, errors)
 }
 
-fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPackage>, min_size: u64) {
+fn traverse_and_spawn(current_path: impl AsRef<Path>, ignore_dirs: &Vec<PathBuf>, sender: Sender<ChannelPackage>, min_size: u64) {
+    if current_path.as_ref().canonicalize().is_ok() && ignore_dirs.iter().any(|x| current_path.as_ref().canonicalize().unwrap().starts_with(x)){
+        return;
+    }
     let current_path_metadata = match fs::symlink_metadata(&current_path) {
         Err(e) => {
             sender
@@ -104,10 +105,10 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, sender: Sender<ChannelPack
                             .is_file()
                     });
                 files.par_iter().for_each_with(sender.clone(), |sender, x| {
-                    traverse_and_spawn(&x.path(), sender.clone(), min_size)
+                    traverse_and_spawn(&x.path(), ignore_dirs, sender.clone(), min_size)
                 });
                 dirs.into_par_iter().for_each_with(sender, |sender, x| {
-                    traverse_and_spawn(x.path().as_path(), sender.clone(), min_size);
+                    traverse_and_spawn(x.path().as_path(), ignore_dirs, sender.clone(), min_size);
                 })
             }
             Err(e) => {
