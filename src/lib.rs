@@ -21,8 +21,10 @@ enum ChannelPackage {
 ///
 /// # Examples
 /// ```
-/// let directories = vec!["/home/jon", "/home/doe"];
-/// let (files, errors) = ddh::deduplicate_dirs(directories);
+/// let search_dirs = vec!["/home/jon", "/home/doe"];
+/// let ignore_dirs = vec!["/home/jon/.git", "/home/doe/scratch"];
+/// let min_size = 1024;
+/// let (files, errors) = ddh::deduplicate_dirs(search_dirs, ignore_dirs, min_size);
 /// ```
 
 pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
