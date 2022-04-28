@@ -20,7 +20,7 @@ enum ChannelPackage {
 /// Constructs a list of unique files from a list of directories.
 ///
 /// # Examples
-/// ```
+/// ```no_run
 /// let search_dirs = vec!["/home/jon", "/home/doe"];
 /// let ignore_dirs = vec!["/home/jon/.git", "/home/doe/scratch"];
 /// let min_size = 1024;
