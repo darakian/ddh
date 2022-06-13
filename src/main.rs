@@ -80,10 +80,18 @@ fn main() {
                                 .help("Minimum file size in bytes to consider."))
                         .get_matches();
 
-    //let (sender, receiver) = channel();
-    let search_dirs: Vec<_> = arguments.values_of("directories").unwrap().collect();
-    let ignore_dirs: Vec<_> = arguments.values_of("ignore").unwrap().collect();
-    let min_size: u64 = arguments.value_of("Minimum").unwrap().parse::<u64>().unwrap_or(0);
+    let search_dirs: Vec<_> = match arguments.values_of("directories") {
+        Some(dirs) => dirs.collect(),
+        None => vec![],
+    };
+    let ignore_dirs: Vec<_> = match arguments.values_of("ignore") {
+        Some(dirs) => dirs.collect(),
+        None => vec![],
+    };
+    let min_size: u64 = match arguments.value_of("Minimum") {
+        Some(i) => i.parse::<u64>().unwrap_or(0),
+        None => 0,
+    };
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) =
         ddh::deduplicate_dirs(search_dirs, ignore_dirs, min_size);
