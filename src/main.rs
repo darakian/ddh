@@ -19,7 +19,7 @@ pub enum Verbosity {
     All,
 }
 
-static DDH_ABOUT: &str = "Compare and contrast directories.\nExample invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates\nExample pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin";
+static DDH_ABOUT: &str = "Compare and contrast directories.\nExample invocation: ddh -d /home/jon/downloads /home/jon/documents -v duplicates\nExample pipe: ddh -d ~/Downloads/ -o no -v all -f json | someJsonParser.bin";
 
 fn main() {
     let arguments = App::new("Directory Difference hTool")

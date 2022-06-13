@@ -32,8 +32,8 @@ DDH supports both a `standard` output for human comprehension and a parsable `js
 Directory Difference hTool
 Jon Moroney jmoroney@hawaii.edu
 Compare and contrast directories.
-Example invocation: ddh /home/jon/downloads /home/jon/documents -f duplicates
-Example pipe: ddh ~/Downloads/ -o no -v all -f json | someJsonParser.bin
+Example invocation: ddh -d /home/jon/downloads /home/jon/documents -v duplicates
+Example pipe: ddh -d ~/Downloads/ -o no -v all -f json | someJsonParser.bin
 
 USAGE:
     ddh [OPTIONS] <Directories>...
