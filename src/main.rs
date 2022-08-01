@@ -10,7 +10,6 @@ use std::path::PathBuf;
 pub enum PrintFmt {
     Standard,
     Json,
-    Off,
 }
 
 pub enum Verbosity {
@@ -66,7 +65,7 @@ fn main() {
                         .arg(Arg::new("Format")
                                 .short('f')
                                 .long("format")
-                                .possible_values(&["standard", "json", "off"])
+                                .possible_values(&["standard", "json"])
                                 .takes_value(true)
                                 .max_values(1)
                                 .help("Sets output format."))
@@ -242,7 +241,6 @@ fn process_full_output(
                 serde_json::to_string(complete_files).unwrap_or_else(|_| "".to_string())
             );
         }
-        _ => {}
     }
 
     match arguments.value_of("Output").unwrap_or("Results.txt") {
@@ -336,7 +334,6 @@ fn write_results_to_file(
                 ))
                 .unwrap();
         }
-        PrintFmt::Off => return,
     }
     println!("{:#?} results written to {}", fmt, file);
 }

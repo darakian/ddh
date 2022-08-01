@@ -45,7 +45,7 @@ FLAGS:
 OPTIONS:
     -b, --blocksize <Blocksize>    Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is
                                    Kilobytes. [possible values: B, K, M, G]
-    -f, --format <Format>          Sets output format. [possible values: standard, json, off]
+    -f, --format <Format>          Sets output format. [possible values: standard, json]
     -o, --output <Output>          Sets file to save all output. Use 'no' for no file output.
     -v, --verbosity <Verbosity>    Sets verbosity for printed output. [possible values: quiet, duplicates, all]
 
