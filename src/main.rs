@@ -1,4 +1,4 @@
-use clap::{App, Arg};
+use clap::{Parser, ValueEnum};
 use ddh::fileinfo::Fileinfo;
 use rayon::prelude::*;
 use std::fs::{self};
@@ -6,94 +6,65 @@ use std::io::prelude::*;
 use std::io::stdin;
 use std::path::PathBuf;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Parser)]
+#[command(author, version, about, long_about=DDH_ABOUT)]
+struct Args {
+    /// Minimum file size in bytes to consider
+    #[arg(short, long("minimum"), num_args(0..=1), default_value_t = 0)]
+    min_size: u64,
+    /// Set the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes
+    #[arg(long, short, ignore_case(true), value_enum, num_args(0..=1), default_value_t = Blocksize::Kilobytes)]
+    blocksize: Blocksize,
+    /// Set verbosity for printed output
+    #[arg(long, short, ignore_case(true), value_enum, num_args(0..=1), default_value_t = Verbosity::Quiet)]
+    verbosity: Verbosity,
+    ///Set file to save all output. Use 'no' for no file output
+    #[arg(long, short, num_args(0..=1), default_value = "Results.txt")]
+    output: String,
+    /// Set output format
+    #[arg(short('f'), long("format"), ignore_case(true), value_enum, num_args(0..=1), default_value_t = PrintFmt::Standard)]
+    fmt: PrintFmt,
+    /// Directories to ignore (comma separated list)
+    #[arg(short, long("ignore"), value_delimiter(','))]
+    ignore_dirs: Vec<String>,
+    /// Directories to parse
+    #[arg(value_parser, required = true)]
+    directories: Vec<String>,
+}
+
+#[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum PrintFmt {
     Standard,
     Json,
 }
 
+#[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum Verbosity {
     Quiet,
     Duplicates,
     All,
 }
 
+#[derive(Debug, Copy, Clone, ValueEnum)]
+pub enum Blocksize {
+    #[clap(name("B"), alias("Bytes"))]
+    Bytes,
+    #[clap(name("K"), alias("Kilobytes"))]
+    Kilobytes,
+    #[clap(name("M"), alias("Megabytes"))]
+    Megabytes,
+    #[clap(name("G"), alias("Gigabytes"))]
+    Gigabytes,
+}
+
 static DDH_ABOUT: &str = "Compare and contrast directories.\nExample invocation: ddh -d /home/jon/downloads /home/jon/documents -v duplicates\nExample pipe: ddh -d ~/Downloads/ -o no -v all -f json | someJsonParser.bin";
 
 fn main() {
-    let arguments = App::new("Directory Difference hTool")
-                        .version(env!("CARGO_PKG_VERSION"))
-                        .author(env!("CARGO_PKG_AUTHORS"))
-                        .about(DDH_ABOUT)
-                        .arg(Arg::new("directories")
-                               .short('d')
-                               .long("directories")
-                               .value_name("Directories")
-                               .help("Directories to parse")
-                               .min_values(1)
-                               .required(true)
-                               .takes_value(true))
-                        .arg(Arg::new("ignore")
-                               .short('i')
-                               .long("ignore")
-                               .value_name("Ignore")
-                               .help("Directories to ignore")
-                               .min_values(1)
-                               .required(false)
-                               .takes_value(true))
-                        .arg(Arg::new("Blocksize")
-                               .short('b')
-                               .long("blocksize")
-                               .ignore_case(true)
-                               .takes_value(true)
-                               .max_values(1)
-                               .possible_values(&["B", "K", "M", "G"])
-                               .help("Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is Kilobytes."))
-                        .arg(Arg::new("Verbosity")
-                                .short('v')
-                                .long("verbosity")
-                                .possible_values(&["quiet", "duplicates", "all"])
-                                .ignore_case(true)
-                                .takes_value(true)
-                                .help("Sets verbosity for printed output."))
-                        .arg(Arg::new("Output")
-                                .short('o')
-                                .long("output")
-                                .takes_value(true)
-                                .max_values(1)
-                                .help("Sets file to save all output. Use 'no' for no file output."))
-                        .arg(Arg::new("Format")
-                                .short('f')
-                                .long("format")
-                                .possible_values(&["standard", "json"])
-                                .takes_value(true)
-                                .max_values(1)
-                                .help("Sets output format."))
-                        .arg(Arg::new("Minimum")
-                                .short('m')
-                                .long("minimum")
-                                .takes_value(true)
-                                .max_values(1)
-                                .default_value("0")
-                                .validator(|s| s.parse::<u64>())
-                                .help("Minimum file size in bytes to consider."))
-                        .get_matches();
 
-    let search_dirs: Vec<_> = match arguments.values_of("directories") {
-        Some(dirs) => dirs.collect(),
-        None => vec![],
-    };
-    let ignore_dirs: Vec<_> = match arguments.values_of("ignore") {
-        Some(dirs) => dirs.collect(),
-        None => vec![],
-    };
-    let min_size: u64 = match arguments.value_of("Minimum") {
-        Some(i) => i.parse::<u64>().unwrap_or(0),
-        None => 0,
-    };
+    let arguments = Args::parse();
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) =
-        ddh::deduplicate_dirs(search_dirs, ignore_dirs, min_size);
+        ddh::deduplicate_dirs(arguments.directories, arguments.ignore_dirs, arguments.min_size);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files
         .par_iter()
         .partition(|&x| x.get_paths().len() > 1);
@@ -102,7 +73,10 @@ fn main() {
         &unique_files,
         &complete_files,
         &read_errors,
-        &arguments,
+        arguments.output.as_str(),
+        arguments.blocksize,
+        arguments.fmt,
+        arguments.verbosity,
     );
 }
 
@@ -111,37 +85,21 @@ fn process_full_output(
     unique_files: &[&Fileinfo],
     complete_files: &[Fileinfo],
     error_paths: &[(PathBuf, std::io::Error)],
-    arguments: &clap::ArgMatches,
+    output: &str,
+    blocksize: Blocksize,
+    fmt: PrintFmt,
+    verbosity: Verbosity,
 ) {
-    let blocksize = match arguments.value_of("Blocksize").unwrap_or("") {
-        "B" => "Bytes",
-        "K" => "Kilobytes",
-        "M" => "Megabytes",
-        "G" => "Gigabytes",
-        _ => "Megabytes",
-    };
     let display_power = match blocksize {
-        "Bytes" => 0,
-        "Kilobytes" => 1,
-        "Megabytes" => 2,
-        "Gigabytes" => 3,
-        _ => 2,
+        Blocksize::Bytes => 0,
+        Blocksize::Kilobytes => 1,
+        Blocksize::Megabytes => 2,
+        Blocksize::Gigabytes => 3,
     };
     let display_divisor = 1024u64.pow(display_power);
-    let fmt = match arguments.value_of("Format").unwrap_or("") {
-        "standard" => PrintFmt::Standard,
-        "json" => PrintFmt::Json,
-        _ => PrintFmt::Standard,
-    };
-    let verbosity = match arguments.value_of("Verbosity").unwrap_or("") {
-        "quiet" => Verbosity::Quiet,
-        "duplicates" => Verbosity::Duplicates,
-        "all" => Verbosity::All,
-        _ => Verbosity::Quiet,
-    };
 
     println!(
-        "{} Total files (with duplicates): {} {}",
+        "{} Total files (with duplicates): {} {:?}",
         complete_files
             .par_iter()
             .map(|x| x.get_paths().len() as u64)
@@ -154,7 +112,7 @@ fn process_full_output(
         blocksize
     );
     println!(
-        "{} Total files (without duplicates): {} {}",
+        "{} Total files (without duplicates): {} {:?}",
         complete_files.len(),
         complete_files
             .par_iter()
@@ -164,13 +122,13 @@ fn process_full_output(
         blocksize
     );
     println!(
-        "{} Single instance files: {} {}",
+        "{} Single instance files: {} {:?}",
         unique_files.len(),
         unique_files.par_iter().map(|x| x.get_length()).sum::<u64>() / (display_divisor),
         blocksize
     );
     println!(
-        "{} Shared instance files: {} {} ({} instances)",
+        "{} Shared instance files: {} {:?} ({} instances)",
         shared_files.len(),
         shared_files.par_iter().map(|x| x.get_length()).sum::<u64>() / (display_divisor),
         blocksize,
@@ -243,7 +201,7 @@ fn process_full_output(
         }
     }
 
-    match arguments.value_of("Output").unwrap_or("Results.txt") {
+    match output {
         "no" => {}
         destination_string => {
             match fs::File::open(destination_string) {
