@@ -32,25 +32,24 @@ DDH supports both a `standard` output for human comprehension and a parsable `js
 Directory Difference hTool
 Jon Moroney jmoroney@hawaii.edu
 Compare and contrast directories.
-Example invocation: ddh -d /home/jon/downloads /home/jon/documents -v duplicates
-Example pipe: ddh -d ~/Downloads/ -o no -v all -f json | someJsonParser.bin
 
-USAGE:
-    ddh [OPTIONS] <Directories>...
+Example invocation: ddh -v duplicates /home/jon/downloads /home/jon/documents
+Example pipe: ddh -o no -v all -f json ~/Downloads/ | someJsonParser.bin
 
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+Usage: ddh [OPTIONS] <DIRECTORIES>...
 
-OPTIONS:
-    -b, --blocksize <Blocksize>    Sets the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes. Default is
-                                   Kilobytes. [possible values: B, K, M, G]
-    -f, --format <Format>          Sets output format. [possible values: standard, json]
-    -o, --output <Output>          Sets file to save all output. Use 'no' for no file output.
-    -v, --verbosity <Verbosity>    Sets verbosity for printed output. [possible values: quiet, duplicates, all]
+Arguments:
+  <DIRECTORIES>...  Directories to parse
 
-ARGS:
-    <Directories>...    Directories to parse
+Options:
+  -m, --minimum [<MIN_SIZE>]     Minimum file size in bytes to consider [default: 0]
+  -b, --blocksize [<BLOCKSIZE>]  Set the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes [default: K] [possible values: B, K, M, G]
+  -v, --verbosity [<VERBOSITY>]  Set verbosity for printed output [default: quiet] [possible values: quiet, duplicates, all]
+  -o, --output [<OUTPUT>]        Set file to save all output. Use 'no' for no file output [default: Results.txt]
+  -f, --format [<FMT>]           Set output format [default: standard] [possible values: standard, json]
+  -i, --ignore <IGNORE_DIRS>     Directories to ignore (comma separated list)
+  -h, --help                     Print help information (use `--help` for more detail)
+  -V, --version                  Print version information
 ```
 ## How Does DDH Work?
 DDH works by hashing files to determine their uniqueness and, as such, depends heavily on disk speeds for performance. The algorithmic choices in use are discussed [here](https://darakian.github.io/2018/04/02/how-many-bytes-does-it-take.html).
