@@ -28,7 +28,7 @@ struct Args {
     #[arg(short, long("ignore"), value_delimiter(','))]
     ignore_dirs: Vec<String>,
     /// Directories to parse
-    #[arg(value_parser, required = true)]
+    #[arg(short, long("directories"), value_delimiter(' '), num_args(1..), required = true)]
     directories: Vec<String>,
 }
 

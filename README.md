@@ -33,23 +33,30 @@ Directory Difference hTool
 Jon Moroney jmoroney@hawaii.edu
 Compare and contrast directories.
 
-Example invocation: ddh -v duplicates /home/jon/downloads /home/jon/documents
-Example pipe: ddh -o no -v all -f json ~/Downloads/ | someJsonParser.bin
+Example invocation: ddh -v duplicates -d /home/jon/downloads /home/jon/documents
+Example pipe: ddh -o no -v all -f json -d ~/Downloads/ | someJsonParser.bin
 
-Usage: ddh [OPTIONS] <DIRECTORIES>...
-
-Arguments:
-  <DIRECTORIES>...  Directories to parse
+Usage: ddh [OPTIONS]
 
 Options:
-  -m, --minimum [<MIN_SIZE>]     Minimum file size in bytes to consider [default: 0]
-  -b, --blocksize [<BLOCKSIZE>]  Set the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes [default: K] [possible values: B, K, M, G]
-  -v, --verbosity [<VERBOSITY>]  Set verbosity for printed output [default: quiet] [possible values: quiet, duplicates, all]
-  -o, --output [<OUTPUT>]        Set file to save all output. Use 'no' for no file output [default: Results.txt]
-  -f, --format [<FMT>]           Set output format [default: standard] [possible values: standard, json]
-  -i, --ignore <IGNORE_DIRS>     Directories to ignore (comma separated list)
-  -h, --help                     Print help information (use `--help` for more detail)
-  -V, --version                  Print version information
+  -m, --minimum [<MIN_SIZE>]
+          Minimum file size in bytes to consider [default: 0]
+  -b, --blocksize [<BLOCKSIZE>]
+          Set the display blocksize to Bytes, Kilobytes, Megabytes or Gigabytes [default: K] [possible values: B, K, M, G]
+  -v, --verbosity [<VERBOSITY>]
+          Set verbosity for printed output [default: quiet] [possible values: quiet, duplicates, all]
+  -o, --output [<OUTPUT>]
+          Set file to save all output. Use 'no' for no file output [default: Results.txt]
+  -f, --format [<FMT>]
+          Set output format [default: standard] [possible values: standard, json]
+  -i, --ignore <IGNORE_DIRS>
+          Directories to ignore (comma separated list)
+  -d, --directories <DIRECTORIES>...
+          Directories to parse
+  -h, --help
+          Print help information (use `--help` for more detail)
+  -V, --version
+          Print version information
 ```
 ## How Does DDH Work?
 DDH works by hashing files to determine their uniqueness and, as such, depends heavily on disk speeds for performance. The algorithmic choices in use are discussed [here](https://darakian.github.io/2018/04/02/how-many-bytes-does-it-take.html).
