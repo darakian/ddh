@@ -1,5 +1,6 @@
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use siphasher::sip128::Hasher128;
+use sha2::{Sha256, Digest};
 use std::cmp::Ordering;
 use std::fs::{self, Metadata};
 use std::hash::Hasher;
@@ -19,11 +20,25 @@ pub enum HashAlgoEnum {
     Sha256,
 }
 
+// pub struct HasherWrapper {
+//     hashAlgo: HashAlgoEnum,
+//     hasher: impl Digest,
+// }
+
+// impl HasherWrapper {
+//     pub fn new(hash_algo: HashAlgoEnum) -> Self {
+//         match 
+//     }
+//     pub fn update() {}
+//     pub fn finalize() -> [u8] {}
+
+// }
+
 /// Serializable struct containing entries for a specific file. These structs will identify individual files as a collection of paths and associated hash and length data.
 #[derive(Debug)]
 pub struct Fileinfo {
-    full_hash: Option<u128>,
-    partial_hash: Option<u128>,
+    full_hash: Option<Vec<u8>>,
+    partial_hash: Option<Vec<u8>>,
     metadata: Metadata,
     pub(crate) file_paths: Vec<PathBuf>,
 }
@@ -47,7 +62,7 @@ impl Fileinfo {
     /// Ok(())
     /// }
     /// ```
-    pub fn new(full: Option<u128>, partial: Option<u128>, meta: Metadata, path: PathBuf) -> Self {
+    pub fn new(full: Option<Vec<u8>>, partial: Option<Vec<u8>>, meta: Metadata, path: PathBuf) -> Self {
         Fileinfo {
             full_hash: full,
             partial_hash: partial,
@@ -88,10 +103,10 @@ impl Fileinfo {
     /// Ok(())
     /// }
     /// ```
-    pub fn get_full_hash(&self) -> Option<u128> {
+    pub fn get_full_hash(&self) -> Option<Vec<u8>> {
         self.full_hash
     }
-    pub(crate) fn set_full_hash(&mut self, hash: Option<u128>) {
+    pub(crate) fn set_full_hash(&mut self, hash: Option<Vec<u8>>) {
         self.full_hash = hash
     }
     /// Gets the hash of the partially read file if available.
@@ -109,10 +124,10 @@ impl Fileinfo {
     /// Ok(())
     /// }
     /// ```
-    pub fn get_partial_hash(&self) -> Option<u128> {
+    pub fn get_partial_hash(&self) -> Option<Vec<u8>> {
         self.partial_hash
     }
-    pub(crate) fn set_partial_hash(&mut self, hash: Option<u128>) {
+    pub(crate) fn set_partial_hash(&mut self, hash: Option<Vec<u8>>) {
         self.partial_hash = hash
     }
     /// Gets a candidate name. This will be the name of the first file inserted into the collection and so can vary.
@@ -160,13 +175,12 @@ impl Fileinfo {
         &self.file_paths
     }
 
-    pub fn generate_hash(&mut self, mode: HashMode, hash_algo: HashAlgoEnum) -> Option<u128> {
-        let mut hasher;
-        match hash_algo {
-            HashAlgoEnum::Sip128 => hasher = siphasher::sip128::SipHasher::new(),
-            _ => hasher = siphasher::sip128::SipHasher::new(),
-        } 
-        let mut hasher = siphasher::sip128::SipHasher::new();
+    pub fn generate_hash(&mut self, mode: HashMode, hash_algo: HashAlgoEnum) -> Option<Vec<u8>> {
+        let mut hasher = match hash_algo {
+            _ => Sha256::new(),
+            HashAlgoEnum::Sha256 => Sha256::new(),
+        };
+
         match fs::File::open(
             self.file_paths
                 .get(0)
@@ -180,16 +194,16 @@ impl Fileinfo {
                 let mut hash_buffer = [0; BLOCK_SIZE * 4];
                 loop {
                     match f.read(&mut hash_buffer) {
-                        Ok(n) if n > 0 => hasher.write(&hash_buffer),
+                        Ok(n) if n > 0 => hasher.update(&hash_buffer),
                         Ok(n) if n == 0 => break,
                         Err(_e) => return None,
                         _ => panic!("Negative length read in hashing"),
                     }
                     if mode == HashMode::Partial {
-                        return Some(hasher.finish128().into());
+                        return Some(hasher.finalize().to_vec());
                     }
                 }
-                Some(hasher.finish128().into())
+                Some(hasher.finalize().to_vec())
             }
             Err(_e) => None,
         }
