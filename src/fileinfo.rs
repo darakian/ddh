@@ -14,6 +14,11 @@ pub enum HashMode {
     Partial,
 }
 
+pub enum HashAlgoEnum {
+    Sip128,
+    Sha256,
+}
+
 /// Serializable struct containing entries for a specific file. These structs will identify individual files as a collection of paths and associated hash and length data.
 #[derive(Debug)]
 pub struct Fileinfo {
@@ -155,7 +160,12 @@ impl Fileinfo {
         &self.file_paths
     }
 
-    pub fn generate_hash(&mut self, mode: HashMode) -> Option<u128> {
+    pub fn generate_hash(&mut self, mode: HashMode, hash_algo: HashAlgoEnum) -> Option<u128> {
+        let mut hasher;
+        match hash_algo {
+            HashAlgoEnum::Sip128 => hasher = siphasher::sip128::SipHasher::new(),
+            _ => hasher = siphasher::sip128::SipHasher::new(),
+        } 
         let mut hasher = siphasher::sip128::SipHasher::new();
         match fs::File::open(
             self.file_paths
