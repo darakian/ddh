@@ -31,7 +31,8 @@ enum ChannelPackage {
 pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
     search_dirs: Vec<P>, 
     ignore_dirs: Vec<P>, 
-    min_size: u64) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
+    min_size: u64,
+    hash_algo: HashAlgoEnum) -> (Vec<Fileinfo>, Vec<(PathBuf, std::io::Error)>) {
     let (sender, receiver) = channel();
     let ignore_paths = ignore_dirs.iter().map(|x| x.as_ref().canonicalize().unwrap()).collect();
     search_dirs
@@ -56,7 +57,7 @@ pub fn deduplicate_dirs<P: AsRef<Path> + Sync>(
     });
     let complete_files: Vec<Fileinfo> = files_of_lengths
         .into_par_iter()
-        .map(|x| differentiate_and_consolidate(x.0, x.1))
+        .map(|x| differentiate_and_consolidate(x.0, x.1, hash_algo))
         .flatten()
         .collect();
     (complete_files, errors)
@@ -124,7 +125,7 @@ fn traverse_and_spawn(current_path: impl AsRef<Path>, ignore_dirs: &Vec<PathBuf>
     }
 }
 
-fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> Vec<Fileinfo> {
+fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>, hash_algo: HashAlgoEnum) -> Vec<Fileinfo> {
     if file_length == 0 || files.is_empty() {
         return files;
     }
@@ -132,7 +133,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         1 => return files,
         n if n > 1 => {
             files.par_iter_mut().for_each(|file_ref| {
-                let hash = file_ref.generate_hash(HashMode::Partial, HashAlgoEnum::Blake3);
+                let hash = file_ref.generate_hash(HashMode::Partial, hash_algo);
                 file_ref.set_partial_hash(hash);
             });
             if file_length <= 4096 {
@@ -159,7 +160,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 .collect();
             files.par_iter_mut().for_each(|x| {
                 if dedupe_hashes.contains(&x.get_partial_hash()) {
-                    let hash = x.generate_hash(HashMode::Full, HashAlgoEnum::Blake3);
+                    let hash = x.generate_hash(HashMode::Full, hash_algo);
                     x.set_full_hash(hash);
                 }
             });

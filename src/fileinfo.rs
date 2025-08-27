@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::fs::{self, Metadata};
 use std::io::Read;
 use std::path::PathBuf;
+use clap::ValueEnum;
 
 const BLOCK_SIZE: usize = 4096;
 
@@ -13,6 +14,7 @@ pub enum HashMode {
     Partial,
 }
 
+#[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum HashAlgoEnum {
     Sha256,
     Blake3,

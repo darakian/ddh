@@ -1,5 +1,5 @@
 use clap::{Parser, ValueEnum};
-use ddh::fileinfo::Fileinfo;
+use ddh::fileinfo::{Fileinfo, HashAlgoEnum};
 use rayon::prelude::*;
 use std::fs::{self};
 use std::io::prelude::*;
@@ -24,6 +24,9 @@ struct Args {
     /// Set output format
     #[arg(short('f'), long("format"), ignore_case(true), value_enum, num_args(0..=1), default_value_t = PrintFmt::Standard)]
     fmt: PrintFmt,
+    /// Set output format
+    #[arg(short('a'), long("hashalgo"), ignore_case(true), value_enum, num_args(0..=1), default_value_t = HashAlgoEnum::Blake3)]
+    hash: HashAlgoEnum,
     /// Directories to ignore (comma separated list)
     #[arg(short, long("ignore"), value_delimiter(','))]
     ignore_dirs: Vec<String>,
@@ -64,7 +67,7 @@ fn main() {
     let arguments = Args::parse();
 
     let (complete_files, read_errors): (Vec<Fileinfo>, Vec<(_, _)>) =
-        ddh::deduplicate_dirs(arguments.directories, arguments.ignore_dirs, arguments.min_size);
+        ddh::deduplicate_dirs(arguments.directories, arguments.ignore_dirs, arguments.min_size, arguments.hash);
     let (shared_files, unique_files): (Vec<&Fileinfo>, Vec<&Fileinfo>) = complete_files
         .par_iter()
         .partition(|&x| x.get_paths().len() > 1);
