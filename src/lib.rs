@@ -132,7 +132,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
         1 => return files,
         n if n > 1 => {
             files.par_iter_mut().for_each(|file_ref| {
-                let hash = file_ref.generate_hash(HashMode::Partial, HashAlgoEnum::Sip128);
+                let hash = file_ref.generate_hash(HashMode::Partial, HashAlgoEnum::Blake3);
                 file_ref.set_partial_hash(hash);
             });
             if file_length <= 4096 {
@@ -159,7 +159,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 .collect();
             files.par_iter_mut().for_each(|x| {
                 if dedupe_hashes.contains(&x.get_partial_hash()) {
-                    let hash = x.generate_hash(HashMode::Full, HashAlgoEnum::Sip128);
+                    let hash = x.generate_hash(HashMode::Full, HashAlgoEnum::Blake3);
                     x.set_full_hash(hash);
                 }
             });

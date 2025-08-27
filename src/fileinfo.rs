@@ -1,5 +1,4 @@
 use serde::ser::{Serialize, SerializeStruct, Serializer};
-use siphasher::sip128::Hasher128;
 use sha2::{Sha256, Digest};
 use std::cmp::Ordering;
 use std::fs::{self, Metadata};
@@ -15,24 +14,38 @@ pub enum HashMode {
 }
 
 pub enum HashAlgoEnum {
-    Sip128,
     Sha256,
     Blake3,
 }
 
-// pub struct HasherWrapper {
-//     hashAlgo: HashAlgoEnum,
-//     hasher: impl Digest,
-// }
+pub struct HasherWrapper {
+    mode: HashAlgoEnum,
+    sha256Hasher: Sha256,
+    blake3Hasher: blake3::Hasher,
+}
 
-// impl HasherWrapper {
-//     pub fn new(hash_algo: HashAlgoEnum) -> Self {
-//         match 
-//     }
-//     pub fn update() {}
-//     pub fn finalize() -> [u8] {}
+impl HasherWrapper {
+    pub fn new(hash_algo: HashAlgoEnum) -> Self {
+        HasherWrapper{
+            mode: hash_algo,
+            sha256Hasher: Sha256::new(),
+            blake3Hasher: blake3::Hasher::new(),
+        }
+    }
+    pub fn update(&mut self, input: &[u8]) {
+        match self.mode {
+            HashAlgoEnum::Sha256 => self.sha256Hasher.update(input),
+            HashAlgoEnum::Blake3 => {self.blake3Hasher.update(input);},
+        }
+    }
+    pub fn finalize(self) -> Vec<u8> {
+        match self.mode {
+            HashAlgoEnum::Sha256 => self.sha256Hasher.finalize().to_vec(),
+            HashAlgoEnum::Blake3 => self.blake3Hasher.finalize().as_bytes().to_vec(),
+        }
+    }
 
-// }
+}
 
 /// Serializable struct containing entries for a specific file. These structs will identify individual files as a collection of paths and associated hash and length data.
 #[derive(Debug)]
@@ -184,10 +197,7 @@ impl Fileinfo {
     }
 
     pub fn generate_hash(&mut self, mode: HashMode, hash_algo: HashAlgoEnum) -> Option<Vec<u8>> {
-        let mut hasher = match hash_algo {
-            _ => Sha256::new(),
-            HashAlgoEnum::Sha256 => Sha256::new(),
-        };
+        let mut hasher = HasherWrapper::new(hash_algo);
 
         match fs::File::open(
             self.file_paths
