@@ -141,7 +141,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
                 });
                 return dedupe(files);
             }
-            let mut partial_hashes: HashMap<Option<u128>, u64> = HashMap::new();
+            let mut partial_hashes: HashMap<Option<Vec<u8>>, u64> = HashMap::new();
             files
                 .iter()
                 .for_each(|f| match partial_hashes.entry(f.get_partial_hash()) {
@@ -172,7 +172,7 @@ fn differentiate_and_consolidate(file_length: u64, mut files: Vec<Fileinfo>) -> 
 }
 
 fn dedupe(mut files: Vec<Fileinfo>) -> Vec<Fileinfo> {
-    let mut cache: HashMap<(Option<u128>, Option<u128>), &mut Fileinfo> = HashMap::new();
+    let mut cache: HashMap<(Option<Vec<u8>>, Option<Vec<u8>>), &mut Fileinfo> = HashMap::new();
     files.iter_mut().for_each(|file| {
         match cache.entry((file.get_partial_hash(), file.get_full_hash())) {
             Entry::Vacant(e) => {

@@ -3,7 +3,6 @@ use siphasher::sip128::Hasher128;
 use sha2::{Sha256, Digest};
 use std::cmp::Ordering;
 use std::fs::{self, Metadata};
-use std::hash::Hasher;
 use std::io::Read;
 use std::path::PathBuf;
 
@@ -18,6 +17,7 @@ pub enum HashMode {
 pub enum HashAlgoEnum {
     Sip128,
     Sha256,
+    Blake3,
 }
 
 // pub struct HasherWrapper {
@@ -104,7 +104,11 @@ impl Fileinfo {
     /// }
     /// ```
     pub fn get_full_hash(&self) -> Option<Vec<u8>> {
-        self.full_hash
+        self.full_hash.clone()
+        // match self.full_hash {
+        //     None => None,
+        //     Some(v) => Some(&v),
+        // }
     }
     pub(crate) fn set_full_hash(&mut self, hash: Option<Vec<u8>>) {
         self.full_hash = hash
@@ -125,7 +129,11 @@ impl Fileinfo {
     /// }
     /// ```
     pub fn get_partial_hash(&self) -> Option<Vec<u8>> {
-        self.partial_hash
+        self.partial_hash.clone()
+        // match self.partial_hash {
+        //     None => None,
+        //     Some(v) => Some(v)
+        // }
     }
     pub(crate) fn set_partial_hash(&mut self, hash: Option<Vec<u8>>) {
         self.partial_hash = hash

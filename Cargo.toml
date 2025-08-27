@@ -18,6 +18,7 @@ serde_json = "1.0"
 siphasher = "0.3"
 nohash-hasher = "0.2"
 sha2 = "0.10.9"
+blake3 = "1.8.2"
 
 [profile.release]
 lto = true
